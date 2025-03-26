@@ -1,0 +1,48 @@
+cabal-version:      3.0
+name:               zephyrus
+version:            0.1.0.0
+synopsis:           HTTP weather forecast service 
+homepage:           https://github.com/ceticamarco/zephyrus
+license:            GPL-3
+license-file:       LICENSE
+author:             Marco Cetica
+maintainer:         email@marcocetica.com
+category:           Network
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+
+common warnings
+    ghc-options: -Wall -Wextra -Werror -O2 -static -threaded
+
+library zephyrus-lib
+    import:            warnings
+    exposed-modules:   Server Controller Error Model Types
+    hs-source-dirs:    src
+    build-depends:     base >= 4.7 && <5
+                      , aeson
+                      , containers
+                      , text
+                      , transformers
+                      , stm
+                      , servant
+                      , servant-server
+                      , req
+                      , vector
+                      , scientific
+                      , time
+    default-language: Haskell2010
+
+executable zephyrus
+    import:           warnings
+    main-is:          Main.hs
+    build-depends:    base >= 4.7 && <5
+                      , zephyrus-lib
+                      , servant
+                      , servant-server
+                      , containers
+                      , transformers
+                      , stm
+                      , warp
+                      , text
+    hs-source-dirs:   app
+    default-language: Haskell2010
