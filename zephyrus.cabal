@@ -3,7 +3,7 @@ name:               zephyrus
 version:            0.1.0.0
 synopsis:           HTTP weather forecast service 
 homepage:           https://github.com/ceticamarco/zephyrus
-license:            GPL-3
+license:            GPL-3.0-or-later
 license-file:       LICENSE
 author:             Marco Cetica
 maintainer:         email@marcocetica.com

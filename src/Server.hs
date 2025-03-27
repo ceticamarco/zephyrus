@@ -4,17 +4,18 @@
 module Server where
 
 import Data.Text (Text)
-import Servant ( Proxy(..), Capture, JSON, type (:>), Get, HasServer(ServerT) )
-import Controller (getWeather)
+import Servant ( Proxy(..), Capture, JSON, type (:>), (:<|>)(..), Get, HasServer(ServerT) )
+import Controller (getWeather, getEnvMetrics)
 
-import Types (Weather(..), AppM)
+import Types (Weather(..), AppM, EnvMetrics(..))
 
 -- Servant API definition
 type WeatherAPI =
-    "zephyrus" :> Capture "city" Text :> Get '[JSON] Weather -- GET /zephyrus/:city
+    "weather" :> Capture "city" Text :> Get '[JSON] Weather :<|> -- GET /weather/:city
+    "metrics" :> Capture "city" Text :> Get '[JSON] EnvMetrics   -- GET /metrics/:city
 
 api :: Proxy WeatherAPI
 api = Proxy
 
 server ::  ServerT WeatherAPI AppM
-server = getWeather
+server = getWeather :<|> getEnvMetrics

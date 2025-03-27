@@ -12,18 +12,33 @@ import Data.Text (Text)
 import Servant ( Handler )
 
 -- The weather data type, representing the weather
-data Weather = Weather { fahrenheitTemp :: Double
-                       , celsiusTemp :: Double
+data Weather = Weather { fahrenheitTemp :: Text
+                       , celsiusTemp :: Text
+                       , condition :: Text
                        , emoji :: Text
                        } deriving (Show, Eq, Generic)
 instance ToJSON Weather
 instance FromJSON Weather
 
--- The weather cache data type, representing a mapping between a city and its weather
-type WCache = Map Text (Weather, UTCTime)
+-- The environmental metrics data type, representing the humidity, pressure and dew point
+data EnvMetrics = EnvMetrics { humidity :: Text
+                           , pressure :: Text
+                           , celsiusDewPoint :: Text
+                           , fahrenheitDewPoint :: Text
+                           } deriving (Show, Eq, Generic)
+instance ToJSON EnvMetrics
+instance FromJSON EnvMetrics
+
+-- Sum type representing the possible values of the cache
+data CacheElement = CacheWeather Weather
+                  | CacheEnvMetrics EnvMetrics
+                  deriving (Show, Eq)
+
+-- The cache data type, representing a mapping between a city and its weather
+type ZCache = Map Text (CacheElement, UTCTime)
 
 -- The state of the weather cache between multiple requests
-newtype State = State { cache :: TVar WCache}
+newtype State = State { cache :: TVar ZCache}
 
 -- The Reader monad for the state
 type AppM = ReaderT State Handler
