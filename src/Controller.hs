@@ -15,15 +15,15 @@ import Data.Maybe (fromMaybe)
 import Servant (throwError)
 import Text.Read (readMaybe)
 
-import Model (getCityCoords, getCityWeather, getCityEnvMetrics)
-import Types (AppM, State(..), Weather(..), ZCache, CacheElement(..), EnvMetrics(..))
+import Model (getCityCoords, getCityWeather, getCityMetrics, getCityWind)
+import Types (AppM, State(..), Weather(..), ZCache, CacheElement(..), Metrics(..), Wind(..), Coordinates)
 import Error (jsonError)
 
 isCacheExpired :: UTCTime -> Int -> UTCTime -> Bool
 isCacheExpired currentTime ttl timestamp =
     diffUTCTime currentTime timestamp > fromIntegral (ttl * 3600)
 
-handleCoordsResult :: Either Text (Double, Double) -> AppM (Double, Double)
+handleCoordsResult :: Either Text Coordinates -> AppM Coordinates
 handleCoordsResult (Left err) = throwError $ jsonError 404 err
 handleCoordsResult (Right coords) = pure coords
 
@@ -64,35 +64,68 @@ getWeather city = do
                     (CacheWeather weather, currTime))
             pure weather
 
-getEnvMetrics :: Text -> AppM EnvMetrics
-getEnvMetrics city = do
+getMetrics :: Text -> AppM Metrics
+getMetrics city = do
     -- Read from cache
     State{cache = tCache} <- ask
-    envMetricsCache <- liftIO $ readTVarIO tCache
+    metricsCache <- liftIO $ readTVarIO tCache
     currentTime <- liftIO getCurrentTime
 
     -- Read TTL value from environment variable
     ttlEnv <- liftIO $ lookupEnv "ZEPHYRUS_CACHE_TTL"
     let timeToLive = fromMaybe 3 (ttlEnv >>= readMaybe) :: Int
 
-    case Map.lookup (city <> "_metrics") envMetricsCache of
-        Just (CacheEnvMetrics envMetrics, timestamp)
-            | not (isCacheExpired currentTime timeToLive timestamp) -> pure envMetrics
-        _ -> fetchEnvMetrics city tCache
+    case Map.lookup (city <> "_metrics") metricsCache of
+        Just (CacheMetrics metrics, timestamp)
+            | not (isCacheExpired currentTime timeToLive timestamp) -> pure metrics
+        _ -> fetchMetrics city tCache
     where
-        fetchEnvMetrics :: Text -> TVar ZCache -> AppM EnvMetrics
-        fetchEnvMetrics city' cache' = do
+        fetchMetrics :: Text -> TVar ZCache -> AppM Metrics
+        fetchMetrics city' cache' = do
             -- Read API key from environment variable
             apiKeyEnv <- liftIO $ lookupEnv "ZEPHYRUS_TOKEN"
             let apiKey = maybe "" pack apiKeyEnv :: Text
 
             coordRes <- liftIO $ getCityCoords city' apiKey
             coords <- handleCoordsResult coordRes
-            envMetricsRes <- liftIO $ getCityEnvMetrics coords apiKey
-            envMetrics <- handleResult envMetricsRes
+            metricsRes <- liftIO $ getCityMetrics coords apiKey
+            metrics <- handleResult metricsRes
             currTime <- liftIO getCurrentTime
             liftIO $ atomically $ modifyTVar' cache'
                 (Map.insert
                     (city' <> "_metrics")
-                    (CacheEnvMetrics envMetrics, currTime))
-            pure envMetrics
+                    (CacheMetrics metrics, currTime))
+            pure metrics
+
+getWind :: Text -> AppM Wind
+getWind city = do
+    -- Read from cache
+    State{cache = tCache} <- ask
+    windCache <- liftIO $ readTVarIO tCache
+    currentTime <- liftIO getCurrentTime
+
+    -- Read TTL value from environment variable
+    ttlEnv <- liftIO $ lookupEnv "ZEPHYRUS_CACHE_TTL"
+    let timeToLive = fromMaybe 3 (ttlEnv >>= readMaybe) :: Int
+
+    case Map.lookup (city <> "_wind") windCache of
+        Just (CacheWind wind, timestamp)
+            | not (isCacheExpired currentTime timeToLive timestamp) -> pure wind
+        _ -> fetchWind city tCache
+    where
+        fetchWind :: Text -> TVar ZCache -> AppM Wind
+        fetchWind city' cache' = do
+            -- Read API key from environment variable
+            apiKeyEnv <- liftIO $ lookupEnv "ZEPHYRUS_TOKEN"
+            let apiKey = maybe "" pack apiKeyEnv :: Text
+
+            coordRes <- liftIO $ getCityCoords city' apiKey
+            coords <- handleCoordsResult coordRes
+            windRes <- liftIO $ getCityWind coords apiKey
+            wind <- handleResult windRes
+            currTime <- liftIO getCurrentTime
+            liftIO $ atomically $ modifyTVar' cache'
+                (Map.insert
+                    (city' <> "_wind")
+                    (CacheWind wind, currTime))
+            pure wind

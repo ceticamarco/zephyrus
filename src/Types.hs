@@ -20,18 +20,30 @@ data Weather = Weather { fahrenheitTemp :: Text
 instance ToJSON Weather
 instance FromJSON Weather
 
--- The environmental metrics data type, representing the humidity, pressure and dew point
-data EnvMetrics = EnvMetrics { humidity :: Text
-                           , pressure :: Text
-                           , celsiusDewPoint :: Text
-                           , fahrenheitDewPoint :: Text
-                           } deriving (Show, Eq, Generic)
-instance ToJSON EnvMetrics
-instance FromJSON EnvMetrics
+-- The metrics data type, representing the humidity, pressure and dew point
+data Metrics = Metrics { humidity :: Text
+                       , pressure :: Text
+                       , celsiusDewPoint :: Text
+                       , fahrenheitDewPoint :: Text
+                       , uvIndex :: Int
+                       , visibility :: Text
+                       } deriving (Show, Eq, Generic)
+instance ToJSON Metrics
+instance FromJSON Metrics
+
+-- The wind data type, representing the wind speed, the wind direction and the direction icon
+data Wind = Wind { metricSpeed :: Text
+                 , imperialSpeed :: Text
+                 , direction :: Text
+                 , arrow :: Text
+                 } deriving (Show, Eq, Generic)
+instance ToJSON Wind
+instance FromJSON Wind
 
 -- Sum type representing the possible values of the cache
 data CacheElement = CacheWeather Weather
-                  | CacheEnvMetrics EnvMetrics
+                  | CacheMetrics Metrics
+                  | CacheWind Wind
                   deriving (Show, Eq)
 
 -- The cache data type, representing a mapping between a city and its weather
@@ -42,3 +54,6 @@ newtype State = State { cache :: TVar ZCache}
 
 -- The Reader monad for the state
 type AppM = ReaderT State Handler
+
+-- The Coordinates data type, representing the latitude and longitude of a city
+type Coordinates = (Double, Double)
