@@ -56,11 +56,11 @@ instance ToJSON Moon
 instance FromJSON Moon
 
 -- Sum type representing the possible values of the cache
-data CacheElement = CacheWeather Weather
-                  | CacheMetrics Metrics
-                  | CacheWind Wind
-                  | CacheForecast Forecast
-                  | CacheMoon Moon
+data CacheElement = WeatherCache Weather
+                  | MetricsCache Metrics
+                  | WindCache Wind
+                  | ForecastCache Forecast
+                  | MoonCache Moon
                   deriving (Show, Eq)
 
 -- The cache data type, representing a mapping between a city and its weather

@@ -9,7 +9,6 @@ author:             Marco Cetica
 maintainer:         email@marcocetica.com
 category:           Network
 build-type:         Simple
-extra-doc-files:    CHANGELOG.md
 
 common warnings
     ghc-options: -Wall -Wextra -Werror -O2 -static -threaded

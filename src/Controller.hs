@@ -43,7 +43,7 @@ getWeather city = do
     let timeToLive = fromMaybe 3 (ttlEnv >>= readMaybe) :: Int
 
     case Map.lookup (city <> "_weather") weatherCache of
-        Just (CacheWeather weather, timestamp)
+        Just (WeatherCache weather, timestamp)
             | not (isCacheExpired currentTime timeToLive timestamp) -> pure weather
         _ -> fetchWeather city tCache
     where
@@ -61,7 +61,7 @@ getWeather city = do
             liftIO $ atomically $ modifyTVar' cache'
                 (Map.insert
                     (city' <> "_weather")
-                    (CacheWeather weather, currTime))
+                    (WeatherCache weather, currTime))
             pure weather
 
 getMetrics :: Text -> AppM Metrics
@@ -76,7 +76,7 @@ getMetrics city = do
     let timeToLive = fromMaybe 3 (ttlEnv >>= readMaybe) :: Int
 
     case Map.lookup (city <> "_metrics") metricsCache of
-        Just (CacheMetrics metrics, timestamp)
+        Just (MetricsCache metrics, timestamp)
             | not (isCacheExpired currentTime timeToLive timestamp) -> pure metrics
         _ -> fetchMetrics city tCache
     where
@@ -94,7 +94,7 @@ getMetrics city = do
             liftIO $ atomically $ modifyTVar' cache'
                 (Map.insert
                     (city' <> "_metrics")
-                    (CacheMetrics metrics, currTime))
+                    (MetricsCache metrics, currTime))
             pure metrics
 
 getWind :: Text -> AppM Wind
@@ -109,7 +109,7 @@ getWind city = do
     let timeToLive = fromMaybe 3 (ttlEnv >>= readMaybe) :: Int
 
     case Map.lookup (city <> "_wind") windCache of
-        Just (CacheWind wind, timestamp)
+        Just (WindCache wind, timestamp)
             | not (isCacheExpired currentTime timeToLive timestamp) -> pure wind
         _ -> fetchWind city tCache
     where
@@ -127,7 +127,7 @@ getWind city = do
             liftIO $ atomically $ modifyTVar' cache'
                 (Map.insert
                     (city' <> "_wind")
-                    (CacheWind wind, currTime))
+                    (WindCache wind, currTime))
             pure wind
 
 getForecast :: Text -> AppM Forecast
@@ -142,7 +142,7 @@ getForecast city = do
     let timeToLive = fromMaybe 3 (ttlEnv >>= readMaybe) :: Int
 
     case Map.lookup (city <> "_forecast") forecastCache of
-        Just (CacheForecast fc, timestamp)
+        Just (ForecastCache fc, timestamp)
             | not (isCacheExpired currentTime timeToLive timestamp) -> pure fc
         _ -> fetchForecast city tCache
     where
@@ -161,7 +161,7 @@ getForecast city = do
             liftIO $ atomically $ modifyTVar' cache'
                 (Map.insert
                     (city' <> "_forecast")
-                    (CacheForecast fc, currTime))
+                    (ForecastCache fc, currTime))
             pure fc
             
 getMoonPhase :: AppM Moon
@@ -176,7 +176,7 @@ getMoonPhase = do
     let timeToLive = fromMaybe 3 (ttlEnv >>= readMaybe) :: Int
 
     case Map.lookup "default_moonphase" moonCache of
-        Just (CacheMoon moon, timestamp)
+        Just (MoonCache moon, timestamp)
             | not (isCacheExpired currentTime timeToLive timestamp) -> pure moon
         _ -> fetchMoonPhase tCache
     where
@@ -192,5 +192,5 @@ getMoonPhase = do
             liftIO $ atomically $ modifyTVar' cache'
                 (Map.insert
                     ("default_moonphase")
-                    (CacheMoon moon, currTime))
+                    (MoonCache moon, currTime))
             pure moon

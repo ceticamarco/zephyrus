@@ -322,6 +322,11 @@ getMoon apiKey = runReq defaultHttpConfig $ do
             let (icon, phase) = getMoonPhase moonValue
             pure $ Moon icon phase)
 
+        {- 0 and 1 are 'new moon',
+        0.25 is 'first quarter moon',
+        0.5 is 'full moon' and 0.75 is 'last quarter moon'.
+        The periods in between are called 'waxing crescent',
+        'waxing gibbous', 'waning gibbous' and 'waning crescent', respectively. -}
         getMoonPhase :: Double -> (Text, Text)
         getMoonPhase moonValue
             | moonValue == 0 || moonValue == 1 = ("🌑", "New Moon")
