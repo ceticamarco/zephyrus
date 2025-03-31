@@ -191,6 +191,6 @@ getMoonPhase = do
             currTime <- liftIO getCurrentTime
             liftIO $ atomically $ modifyTVar' cache'
                 (Map.insert
-                    ("default_moonphase")
+                    "default_moonphase"
                     (MoonCache moon, currTime))
             pure moon

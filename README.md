@@ -9,8 +9,8 @@
 </div>
 
 **Zephyrus** is a lightweight HTTP weather service designed to provide a simple way to
-gather meteorological data. It's written in Haskell using [Servant](https://www.servant.dev/)
-and [OpenWeatherMap](https://home.openweathermap.org).
+gather meteorological data and apply statistical analysis to past weather conditions. It's written in 
+Haskell using [Servant](https://www.servant.dev/) and [OpenWeatherMap](https://home.openweathermap.org).
 
 I've built this service out of frustration with existing
 weather platforms cluttered with ads, paywalls, clickbait contents and unnecessary features.
@@ -144,7 +144,7 @@ being returned to the client. The expiration date, expressed in hours, is contro
 the `ZEPHYRUS_CACHE_TTL` environment variable. Once a cached value expires, Zephyrus retrieves
 fresh data from OpenWeatherMap servers.
 
-This caching system significantly improves Zephyrus performance by decreasing latency. Additionally,
+The caching system significantly improves Zephyrus performance by decreasing latency. Additionally,
 it helps minimize the number of API calls made to OpenWeatherMap' servers, an important factor
 if you are using the OpenWeatherMap free tier.
 

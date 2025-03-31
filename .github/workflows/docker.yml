@@ -1,4 +1,4 @@
-name: zephyrus
+name: Docker
 on:
   push:
     branches:
