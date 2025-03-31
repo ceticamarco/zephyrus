@@ -5,6 +5,7 @@ module Types where
 import GHC.Generics (Generic)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Time.Clock (UTCTime)
+import Data.Time.Calendar(Day)
 import Control.Concurrent.STM.TVar (TVar)
 import Control.Monad.Trans.Reader (ReaderT)
 import Data.Map (Map)
@@ -12,10 +13,11 @@ import Data.Text (Text)
 import Servant ( Handler )
 
 -- The weather data type, representing the weather
-data Weather = Weather { fahrenheitTemp :: Text
+data Weather = Weather { date :: Day
+                       , fahrenheitTemp :: Text
                        , celsiusTemp :: Text
                        , condition :: Text
-                       , emoji :: Text
+                       , condEmoji :: Text
                        } deriving (Show, Eq, Generic)
 instance ToJSON Weather
 instance FromJSON Weather
@@ -40,10 +42,25 @@ data Wind = Wind { metricSpeed :: Text
 instance ToJSON Wind
 instance FromJSON Wind
 
+-- The forecast data type, representing the weather forecast of the next 5 days
+newtype Forecast = Forecast { forecast :: [Weather] }
+              deriving (Show, Eq, Generic)
+instance ToJSON Forecast
+instance FromJSON Forecast
+
+-- The moon data type, representing the moon phase
+data Moon = Moon { moonEmoji :: Text
+                 , moonPhase :: Text
+                 } deriving (Show, Eq, Generic)
+instance ToJSON Moon
+instance FromJSON Moon
+
 -- Sum type representing the possible values of the cache
 data CacheElement = CacheWeather Weather
                   | CacheMetrics Metrics
                   | CacheWind Wind
+                  | CacheForecast Forecast
+                  | CacheMoon Moon
                   deriving (Show, Eq)
 
 -- The cache data type, representing a mapping between a city and its weather

@@ -9,10 +9,36 @@ import qualified Data.Vector as V
 import Data.Text (Text, pack, isSuffixOf)
 import Text.Printf (printf)
 import Data.Scientific (toRealFloat)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Data.Time.Clock (utctDay)
 import Network.HTTP.Req ((/:), (=:), req, https, runReq, defaultHttpConfig, jsonResponse, responseBody)
 import qualified Network.HTTP.Req as Req
 
-import Types (Weather(..), Metrics(..), Wind(..), Coordinates)
+import Types (Weather(..), Metrics(..), Wind(..), Forecast(..), Moon(..), Coordinates)
+
+extractField :: Text -> [Value] -> Parser Text
+extractField field (x:_) = withObject "weather[0]" (.: fromText field) x
+extractField _ _ = fail "Weather array is empty"
+
+getEmoji :: Text -> Bool -> Text
+getEmoji condition' isNight =
+    case condition' of
+        "Thunderstorm" -> "⛈️"
+        "Drizzle"      -> "🌦 "
+        "Rain"         -> "🌧 "
+        "Snow"         -> "☃️"
+        "Mist"         -> "💭"
+        "Smoke"        -> "💭"
+        "Haze"         -> "💭"
+        "Dust"         -> "💭"
+        "Fog"          -> "💭"
+        "Sand"         -> "💭"
+        "Ash"          -> "💭"
+        "Squall"       -> "💭"
+        "Tornado"      -> "🌪 "
+        "Clear"        -> if isNight then "🌙" else "☀️"
+        "Clouds"       -> "☁️"
+        _              -> "❓"
 
 getCityCoords :: Text -> Text -> IO (Either Text Coordinates)
 getCityCoords city appid = runReq defaultHttpConfig $ do
@@ -64,11 +90,16 @@ getCityWeather coordinates appid = runReq defaultHttpConfig $ do
             weatherArray <- current .: "weather"
             conditionVal <- withArray "weather" (extractField "main" . V.toList) weatherArray
             temp <- current .: "temp"
+            unixTs <- current .: "dt"
             icon <- withArray "weather" (extractField "icon" . V.toList) weatherArray
 
             -- Compute temperature in Celsius and Fahrenheit
             let celsiusVal = round (temp :: Double) :: Int
             let fahrenheitVal = (celsiusVal * 9 `div` 5) + 32
+
+            -- Format UNIX timestamp as '<DAY_OF_THE_WEEK> dd/MM'
+            let utcTime = posixSecondsToUTCTime (fromIntegral (unixTs :: Int))
+            let weatherDate = utctDay utcTime
 
             -- Build temperature strings in metric and imperial units
             let celsiusStr = pack $ printf "%s%s°C"
@@ -82,31 +113,7 @@ getCityWeather coordinates appid = runReq defaultHttpConfig $ do
             let isNight = "n" `isSuffixOf` icon
             let emojiVal = getEmoji conditionVal isNight
 
-            pure $ Weather fahrenheitStr celsiusStr conditionVal emojiVal)
-
-        extractField :: Text -> [Value] -> Parser Text
-        extractField field (x:_) = withObject "weather[0]" (.: fromText field) x
-        extractField _ _ = fail "Weather array is empty"
-
-        getEmoji :: Text -> Bool -> Text
-        getEmoji condition' isNight =
-            case condition' of
-                "Thunderstorm" -> "⛈️"
-                "Drizzle"      -> "🌦 "
-                "Rain"         -> "🌧 "
-                "Snow"         -> "☃️"
-                "Mist"         -> "💭"
-                "Smoke"        -> "💭"
-                "Haze"         -> "💭"
-                "Dust"         -> "💭"
-                "Fog"          -> "💭"
-                "Sand"         -> "💭"
-                "Ash"          -> "💭"
-                "Squall"       -> "💭"
-                "Tornado"      -> "🌪 "
-                "Clear"        -> if isNight then "🌙" else "☀️"
-                "Clouds"       -> "☁️"
-                _              -> "❓"
+            pure $ Weather weatherDate fahrenheitStr celsiusStr conditionVal emojiVal)
 
 getCityMetrics :: Coordinates -> Text -> IO (Either Text Metrics)
 getCityMetrics coordinates appid = runReq defaultHttpConfig $ do
@@ -226,3 +233,103 @@ getCityWind coordinates apiKey = runReq defaultHttpConfig $ do
                 -- "stay" bounded to the map
                 idx = round (windDeg / 22.5) `mod` 16
             in cardinalDirections !! idx
+
+getCityForecast :: Coordinates -> Text -> IO (Either Text Forecast)
+getCityForecast coordinates apiKey = runReq defaultHttpConfig $ do
+    -- Fetch weather data
+    let reqUri = https "api.openweathermap.org" /: "data" /: "3.0" /: "onecall"
+    response <- req Req.GET reqUri Req.NoReqBody jsonResponse $
+        "lat" =: fst coordinates <>
+        "lon" =: snd coordinates <>
+        "appid" =: apiKey <>
+        "units" =: ("metric" :: Text) <>
+        "exclude" =: ("current,minutely,hourly,alerts" :: Text)
+
+    -- Parse JSON response
+    let resBody = responseBody response :: Value
+    case parseForecast resBody of
+        Right fc -> pure $ Right fc
+        Left err -> pure $ Left $ "Unable to parse API request: " <> pack err
+    where
+        parseForecast :: Value -> Either String Forecast
+        parseForecast = parseEither (withObject "root" $ \root -> do
+            -- Extract the daily array from the JSON object
+            daily <- root .: "daily"
+
+            -- Parse each element of the array into a Weather object
+            fc <- withArray "daily" (mapM parseDailyWeather . V.toList) daily
+
+            pure $ Forecast fc)
+
+        parseDailyWeather :: Value -> Parser Weather
+        parseDailyWeather = withObject "daily element" $ \obj -> do
+            -- Extract temperature and weather condition
+            temp <- obj .: "temp" >>= (.: "day")
+            weatherArray <- obj .: "weather"
+            unixTs <- obj .: "dt"
+            conditionVal <- withArray "weather" (extractField "main" . V.toList) weatherArray
+            icon <- withArray "weather" (extractField "icon" . V.toList) weatherArray
+            
+            -- Compute temperature in Celsius and Fahrenheit
+            let celsiusVal = round (temp :: Double) :: Int
+            let fahrenheitVal = (celsiusVal * 9 `div` 5) + 32
+
+            -- Format UNIX timestamp as '<DAY_OF_THE_WEEK> dd/MM'
+            let utcTime = posixSecondsToUTCTime (fromIntegral (unixTs :: Int))
+            let weatherDate = utctDay utcTime
+
+            -- Build temperature strings in metric and imperial units
+            let celsiusStr = pack $ printf "%s%s°C"
+                    (if celsiusVal > 0 then "+" else "" :: String)
+                    (show celsiusVal)
+            let fahrenheitStr = pack $ printf "%s%s°F"
+                    (if fahrenheitVal > 0 then "+" else "" :: String)
+                    (show fahrenheitVal)
+
+            -- Get emoji from weather condition
+            let isNight = "n" `isSuffixOf` icon
+            let emojiVal = getEmoji conditionVal isNight
+
+            pure $ Weather weatherDate fahrenheitStr celsiusStr conditionVal emojiVal
+
+getMoon :: Text -> IO (Either Text Moon)
+getMoon apiKey = runReq defaultHttpConfig $ do
+    -- Fetch weather data
+    let reqUri = https "api.openweathermap.org" /: "data" /: "3.0" /: "onecall"
+    response <- req Req.GET reqUri Req.NoReqBody jsonResponse $
+        "lat" =: (41.8933203 :: Double) <> -- Rome latitude
+        "lon" =: (12.4829321 :: Double) <> -- Rome longitude
+        "appid" =: apiKey <>
+        "units" =: ("metric" :: Text) <>
+        "exclude" =: ("minutely,hourly,current,alerts" :: Text)
+
+    -- Parse JSON response
+    let resBody = responseBody response :: Value
+    case parseMoon resBody of
+        Right moon -> pure $ Right moon
+        Left err -> pure $ Left $ "Unable to parse API request: " <> pack err
+    where
+        parseMoon :: Value -> Either String Moon
+        parseMoon = parseEither (withObject "root" $ \root -> do
+            -- Extract keys from JSON response
+            daily <- root .: "daily"
+            moonValue <- withArray "daily" (\arr -> do
+                if V.null arr
+                    then fail "daily array is empty"
+                    else withObject "daily element" (.: "moon_phase") (V.head arr)) daily
+
+            -- Map moon phase to emoji and phase description
+            let (icon, phase) = getMoonPhase moonValue
+            pure $ Moon icon phase)
+
+        getMoonPhase :: Double -> (Text, Text)
+        getMoonPhase moonValue
+            | moonValue == 0 || moonValue == 1 = ("🌑", "New Moon")
+            | moonValue > 0 && moonValue < 0.25 = ("🌒", "Waxing Crescent")
+            | moonValue == 0.25 = ("🌓", "First Quarter")
+            | moonValue > 0.25 && moonValue < 0.5 = ("🌔", "Waxing Gibbous")
+            | moonValue == 0.5 = ("🌕", "Full Moon")
+            | moonValue > 0.5 && moonValue < 0.75 = ("🌖", "Waning Gibbous")
+            | moonValue == 0.75 = ("🌗", "Last Quarter")
+            | moonValue > 0.75 && moonValue < 1 = ("🌘", "Waning Crescent")
+            | otherwise = ("❓", "Unknown moon phase")

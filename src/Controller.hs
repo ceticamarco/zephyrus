@@ -15,8 +15,8 @@ import Data.Maybe (fromMaybe)
 import Servant (throwError)
 import Text.Read (readMaybe)
 
-import Model (getCityCoords, getCityWeather, getCityMetrics, getCityWind)
-import Types (AppM, State(..), Weather(..), ZCache, CacheElement(..), Metrics(..), Wind(..), Coordinates)
+import Model (getCityCoords, getCityWeather, getCityMetrics, getCityWind, getCityForecast, getMoon)
+import Types (AppM, State(..), Weather(..), ZCache, CacheElement(..), Metrics(..), Wind(..), Forecast(..), Moon(..), Coordinates)
 import Error (jsonError)
 
 isCacheExpired :: UTCTime -> Int -> UTCTime -> Bool
@@ -129,3 +129,68 @@ getWind city = do
                     (city' <> "_wind")
                     (CacheWind wind, currTime))
             pure wind
+
+getForecast :: Text -> AppM Forecast
+getForecast city = do
+    -- Read from cache
+    State{cache = tCache} <- ask
+    forecastCache <- liftIO $ readTVarIO tCache
+    currentTime <- liftIO getCurrentTime
+
+    -- Read TTL value from environment variable
+    ttlEnv <- liftIO $ lookupEnv "ZEPHYRUS_CACHE_TTL"
+    let timeToLive = fromMaybe 3 (ttlEnv >>= readMaybe) :: Int
+
+    case Map.lookup (city <> "_forecast") forecastCache of
+        Just (CacheForecast fc, timestamp)
+            | not (isCacheExpired currentTime timeToLive timestamp) -> pure fc
+        _ -> fetchForecast city tCache
+    where
+        fetchForecast :: Text -> TVar ZCache -> AppM Forecast
+        fetchForecast city' cache' = do
+            -- Read API key from environment variable
+            apiKeyEnv <- liftIO $ lookupEnv "ZEPHYRUS_TOKEN"
+            let apiKey = maybe "" pack apiKeyEnv :: Text
+
+            coordRes <- liftIO $ getCityCoords city' apiKey
+            coords <- handleCoordsResult coordRes
+            forecastRes <- liftIO $ getCityForecast coords apiKey
+            fc <- handleResult forecastRes
+
+            currTime <- liftIO getCurrentTime
+            liftIO $ atomically $ modifyTVar' cache'
+                (Map.insert
+                    (city' <> "_forecast")
+                    (CacheForecast fc, currTime))
+            pure fc
+            
+getMoonPhase :: AppM Moon
+getMoonPhase = do
+    -- Read from cache
+    State{cache = tCache} <- ask
+    moonCache <- liftIO $ readTVarIO tCache
+    currentTime <- liftIO getCurrentTime
+
+    -- Read TTL value from environment variable
+    ttlEnv <- liftIO $ lookupEnv "ZEPHYRUS_CACHE_TTL"
+    let timeToLive = fromMaybe 3 (ttlEnv >>= readMaybe) :: Int
+
+    case Map.lookup "default_moonphase" moonCache of
+        Just (CacheMoon moon, timestamp)
+            | not (isCacheExpired currentTime timeToLive timestamp) -> pure moon
+        _ -> fetchMoonPhase tCache
+    where
+        fetchMoonPhase :: TVar ZCache -> AppM Moon
+        fetchMoonPhase cache' = do
+            -- Read API key from environment variable
+            apiKeyEnv <- liftIO $ lookupEnv "ZEPHYRUS_TOKEN"
+            let apiKey = maybe "" pack apiKeyEnv :: Text
+
+            moonPhaseRes <- liftIO $ getMoon apiKey
+            moon <- handleResult moonPhaseRes
+            currTime <- liftIO getCurrentTime
+            liftIO $ atomically $ modifyTVar' cache'
+                (Map.insert
+                    ("default_moonphase")
+                    (CacheMoon moon, currTime))
+            pure moon
