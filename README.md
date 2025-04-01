@@ -10,7 +10,7 @@
 
 **Zephyrus** is a lightweight HTTP weather service designed to provide a simple way to
 gather meteorological data and apply statistical analysis to past weather conditions. It's written in 
-Haskell using [Servant](https://www.servant.dev/) and [OpenWeatherMap](https://home.openweathermap.org).
+Haskell using [Servant](https://www.servant.dev/) and [OpenWeatherMap](https://openweathermap.org).
 
 I've built this service out of frustration with existing
 weather platforms cluttered with ads, paywalls, clickbait contents and unnecessary features.
@@ -112,7 +112,6 @@ will yield
       "date": "2025-04-01",
       "fahrenheitTemp": "+55°F"
     },
-    // ...
   ]
 }
 ```

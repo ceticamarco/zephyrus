@@ -15,4 +15,7 @@ RUN cabal build --only-dependencies
 COPY . /opt/zephyrus
 RUN cabal install
 
+# Strip binary file
+RUN strip /root/.local/bin/zephyrus
+
 CMD ["zephyrus"]

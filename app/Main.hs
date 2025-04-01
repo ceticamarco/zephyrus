@@ -10,22 +10,52 @@ import Network.Wai.Handler.Warp (run)
 import System.Environment (lookupEnv)
 import System.Exit (die)
 import Data.Text (Text, unpack)
+import Text.Read (readMaybe)
+import qualified Data.Text as T
 
 import Server (api, server)
 import Types (State(..))
 
-getEnvVariable :: Read a => Text -> Text -> IO a
-getEnvVariable var errMsg = do
+validatePort :: Int -> IO Int
+validatePort port = if port < 0 || port > 65535
+    then die "The port must be within the 0-65535 range"
+    else pure port
+
+validateTTL :: Int -> IO Int
+validateTTL ttl = if ttl < 0
+    then die "time-to-live variable must be a non-negative integer"
+    else pure ttl
+
+validateToken :: String -> Maybe Text
+validateToken token =
+    let tk = T.pack token
+    in if T.length tk /= 32 
+        then Nothing
+        else Just tk
+
+getEnvVariable :: Text -> (String -> Maybe a) -> (a -> IO b) -> IO b
+getEnvVariable var parse validate = do
     maybeVal <- lookupEnv (unpack var)
-    case maybeVal of
-        Just value -> pure (read value)
-        Nothing -> die (unpack errMsg)
+    case maybeVal >>= parse of
+        Just value -> validate value
+        Nothing -> die (unpack var <> ": variable not set or invalid format")
 
 main :: IO ()
 main = do
-    port <- getEnvVariable "ZEPHYRUS_PORT" "The ZEPHYRUS_PORT environment variable is not set" :: IO Int
-    _ <- getEnvVariable "ZEPHYRUS_CACHE_TTL" "The ZEPHYRUS_CACHE_TTL environment variable is not set" :: IO Int
-    _ <- getEnvVariable "ZEPHYRUS_TOKEN" "The ZEPHYRUS_TOKEN environment variable is not set" :: IO Int
+    port <- getEnvVariable
+        "ZEPHYRUS_PORT"
+        readMaybe
+        validatePort
+
+    _ <- getEnvVariable
+        "ZEPHYRUS_CACHE_TTL"
+        readMaybe
+        validateTTL
+
+    _ <- getEnvVariable
+        "ZEPHYRUS_TOKEN"
+        validateToken
+        pure
 
     putStrLn ("Listening on http://127.0.0.1:" <> show port)
     initialCache <- newTVarIO Map.empty
