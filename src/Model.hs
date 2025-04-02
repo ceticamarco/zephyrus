@@ -257,7 +257,7 @@ getCityForecast coordinates apiKey = runReq defaultHttpConfig $ do
             daily <- root .: "daily"
 
             -- Parse each element of the array into a Weather object
-            fc <- withArray "daily" (mapM parseDailyWeather . V.toList) daily
+            fc <- withArray "daily" (mapM parseDailyWeather . take 5 . V.toList) daily
 
             pure $ Forecast fc)
 

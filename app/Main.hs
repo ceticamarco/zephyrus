@@ -2,7 +2,7 @@
 
 module Main where
 
-import Servant ( hoistServer, serve )
+import Servant ( hoistServer, serve, Application, Handler )
 import qualified Data.Map as Map
 import Control.Monad.Trans.Reader (ReaderT (runReaderT))
 import Control.Concurrent.STM.TVar (newTVarIO)
@@ -14,7 +14,7 @@ import Text.Read (readMaybe)
 import qualified Data.Text as T
 
 import Server (api, server)
-import Types (State(..))
+import Types (State(..), AppM)
 
 validatePort :: Int -> IO Int
 validatePort port = if port < 0 || port > 65535
@@ -40,6 +40,13 @@ getEnvVariable var parse validate = do
         Just value -> validate value
         Nothing -> die (unpack var <> ": variable not set or invalid format")
 
+
+appToHandler :: State -> AppM a -> Handler a
+appToHandler state appM = runReaderT appM state
+
+app :: State -> Application
+app state = serve api (hoistServer api (appToHandler state) server)
+
 main :: IO ()
 main = do
     port <- getEnvVariable
@@ -57,6 +64,8 @@ main = do
         validateToken
         pure
 
-    putStrLn ("Listening on http://127.0.0.1:" <> show port)
     initialCache <- newTVarIO Map.empty
-    run port $ serve api $ hoistServer api (`runReaderT` State initialCache) server
+    let state = State { cache = initialCache }
+
+    putStrLn ("Listening on http://127.0.0.1:" <> show port)
+    run port (app state)
