@@ -15,7 +15,7 @@ common warnings
 
 library zephyrus-lib
     import:            warnings
-    exposed-modules:   Server Controller Error Model Types
+    exposed-modules:   Server Controller Error Model Statistics Types
     hs-source-dirs:    src
     build-depends:     base >= 4.7 && <5
                       , aeson

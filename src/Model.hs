@@ -14,7 +14,7 @@ import Data.Time.Clock (utctDay)
 import Network.HTTP.Req ((/:), (=:), req, https, runReq, defaultHttpConfig, jsonResponse, responseBody)
 import qualified Network.HTTP.Req as Req
 
-import Types (Weather(..), Metrics(..), Wind(..), Forecast(..), Moon(..), Coordinates)
+import Types (Weather(..), Metrics(..), Wind(..), Forecast(..), Moon(..), City(..))
 
 extractField :: Text -> [Value] -> Parser Text
 extractField field (x:_) = withObject "weather[0]" (.: fromText field) x
@@ -40,7 +40,7 @@ getEmoji condition' isNight =
         "Clouds"       -> "☁️"
         _              -> "❓"
 
-getCityCoords :: Text -> Text -> IO (Either Text Coordinates)
+getCityCoords :: Text -> Text -> IO (Either Text City)
 getCityCoords city appid = runReq defaultHttpConfig $ do
     -- Fetch city coordinates
     let reqUri = https "api.openweathermap.org" /: "geo" /: "1.0" /: "direct"
@@ -56,23 +56,27 @@ getCityCoords city appid = runReq defaultHttpConfig $ do
         Array arr -> do
             let root = V.head arr
             case parseEither parseCoords root of
-                Right coords -> pure $ Right coords
+                Right coords -> pure $ Right $ City
+                    { name = city
+                    , lat = fst coords
+                    , lon = snd coords
+                    }
                 Left err -> pure $ Left $ "JSON parsing error: " <> pack err
         _ -> pure $ Left "Unexpected response format"
     where
-        parseCoords :: Value -> Parser Coordinates
+        parseCoords :: Value -> Parser (Double, Double)
         parseCoords = withObject "root" $ \obj -> do
-            lat <- obj .: "lat"
-            lon <- obj .: "lon"
-            pure (toRealFloat lat, toRealFloat lon)
+            latitude <- obj .: "lat"
+            longitude <- obj .: "lon"
+            pure (toRealFloat latitude, toRealFloat longitude)
 
-getCityWeather :: Coordinates -> Text -> IO (Either Text Weather)
-getCityWeather coordinates appid = runReq defaultHttpConfig $ do
+getCityWeather :: City -> Text -> IO (Either Text Weather)
+getCityWeather city appid = runReq defaultHttpConfig $ do
     -- Fetch weather data
     let reqUri = https "api.openweathermap.org" /: "data" /: "3.0" /: "onecall"
     response <- req Req.GET reqUri Req.NoReqBody jsonResponse $
-        "lat" =: fst coordinates <>
-        "lon" =: snd coordinates <>
+        "lat" =: lat city <>
+        "lon" =: lon city <>
         "appid" =: appid <>
         "units" =: ("metric" :: Text) <>
         "exclude" =: ("minutely,hourly,daily,alerts" :: Text)
@@ -101,27 +105,25 @@ getCityWeather coordinates appid = runReq defaultHttpConfig $ do
             let utcTime = posixSecondsToUTCTime (fromIntegral (unixTs :: Int))
             let weatherDate = utctDay utcTime
 
-            -- Build temperature strings in metric and imperial units
-            let celsiusStr = pack $ printf "%s%s°C"
-                    (if celsiusVal > 0 then "+" else "" :: String)
-                    (show celsiusVal)
-            let fahrenheitStr = pack $ printf "%s%s°F"
-                    (if fahrenheitVal > 0 then "+" else "" :: String)
-                    (show fahrenheitVal)
-
             -- Get emoji from weather condition
             let isNight = "n" `isSuffixOf` icon
             let emojiVal = getEmoji conditionVal isNight
 
-            pure $ Weather weatherDate fahrenheitStr celsiusStr conditionVal emojiVal)
+            pure $ Weather
+                { date = weatherDate
+                , fahrenheitTemp = pack $ show fahrenheitVal
+                , celsiusTemp = pack $ show celsiusVal
+                , condition = conditionVal
+                , condEmoji = emojiVal 
+                })
 
-getCityMetrics :: Coordinates -> Text -> IO (Either Text Metrics)
-getCityMetrics coordinates appid = runReq defaultHttpConfig $ do
+getCityMetrics :: City -> Text -> IO (Either Text Metrics)
+getCityMetrics city appid = runReq defaultHttpConfig $ do
     -- Fetch weather data
     let reqUri = https "api.openweathermap.org" /: "data" /: "3.0" /: "onecall"
     response <- req Req.GET reqUri Req.NoReqBody jsonResponse $
-        "lat" =: fst coordinates <>
-        "lon" =: snd coordinates <>
+        "lat" =: lat city <>
+        "lon" =: lon city <>
         "appid" =: appid <>
         "units" =: ("metric" :: Text) <>
         "exclude" =: ("minutely,hourly,daily,alerts" :: Text)
@@ -168,13 +170,13 @@ getCityMetrics coordinates appid = runReq defaultHttpConfig $ do
 
             pure $ Metrics humidityStr pressureStr celsiusStr fahrenheitStr uv visInKm)
 
-getCityWind :: Coordinates -> Text -> IO (Either Text Wind)
-getCityWind coordinates apiKey = runReq defaultHttpConfig $ do
+getCityWind :: City -> Text -> IO (Either Text Wind)
+getCityWind city apiKey = runReq defaultHttpConfig $ do
     -- Fetch weather data
     let reqUri = https "api.openweathermap.org" /: "data" /: "3.0" /: "onecall"
     response <- req Req.GET reqUri Req.NoReqBody jsonResponse $
-        "lat" =: fst coordinates <>
-        "lon" =: snd coordinates <>
+        "lat" =: lat city <>
+        "lon" =: lon city <>
         "appid" =: apiKey <>
         "units" =: ("metric" :: Text) <>
         "exclude" =: ("minutely,hourly,daily,alerts" :: Text)
@@ -234,13 +236,13 @@ getCityWind coordinates apiKey = runReq defaultHttpConfig $ do
                 idx = round (windDeg / 22.5) `mod` 16
             in cardinalDirections !! idx
 
-getCityForecast :: Coordinates -> Text -> IO (Either Text Forecast)
-getCityForecast coordinates apiKey = runReq defaultHttpConfig $ do
+getCityForecast :: City -> Text -> IO (Either Text Forecast)
+getCityForecast city apiKey = runReq defaultHttpConfig $ do
     -- Fetch weather data
     let reqUri = https "api.openweathermap.org" /: "data" /: "3.0" /: "onecall"
     response <- req Req.GET reqUri Req.NoReqBody jsonResponse $
-        "lat" =: fst coordinates <>
-        "lon" =: snd coordinates <>
+        "lat" =: lat city <>
+        "lon" =: lon city <>
         "appid" =: apiKey <>
         "units" =: ("metric" :: Text) <>
         "exclude" =: ("current,minutely,hourly,alerts" :: Text)
@@ -278,19 +280,18 @@ getCityForecast coordinates apiKey = runReq defaultHttpConfig $ do
             let utcTime = posixSecondsToUTCTime (fromIntegral (unixTs :: Int))
             let weatherDate = utctDay utcTime
 
-            -- Build temperature strings in metric and imperial units
-            let celsiusStr = pack $ printf "%s%s°C"
-                    (if celsiusVal > 0 then "+" else "" :: String)
-                    (show celsiusVal)
-            let fahrenheitStr = pack $ printf "%s%s°F"
-                    (if fahrenheitVal > 0 then "+" else "" :: String)
-                    (show fahrenheitVal)
 
             -- Get emoji from weather condition
             let isNight = "n" `isSuffixOf` icon
             let emojiVal = getEmoji conditionVal isNight
 
-            pure $ Weather weatherDate fahrenheitStr celsiusStr conditionVal emojiVal
+            pure $ Weather
+                { date = weatherDate
+                , fahrenheitTemp = pack $ show fahrenheitVal
+                , celsiusTemp = pack $ show celsiusVal
+                , condition = conditionVal
+                , condEmoji = emojiVal 
+                }
 
 getMoon :: Text -> IO (Either Text Moon)
 getMoon apiKey = runReq defaultHttpConfig $ do

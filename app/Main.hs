@@ -40,7 +40,6 @@ getEnvVariable var parse validate = do
         Just value -> validate value
         Nothing -> die (unpack var <> ": variable not set or invalid format")
 
-
 appToHandler :: State -> AppM a -> Handler a
 appToHandler state appM = runReaderT appM state
 
@@ -64,8 +63,12 @@ main = do
         validateToken
         pure
 
-    initialCache <- newTVarIO Map.empty
-    let state = State { cache = initialCache }
+    -- Initialize cache and statistical database
+    cache <- newTVarIO Map.empty
+    db <- newTVarIO Map.empty
+
+    -- Create initial state
+    let state = State { zCache = cache, statDB = db }
 
     putStrLn ("Listening on http://127.0.0.1:" <> show port)
     run port (app state)

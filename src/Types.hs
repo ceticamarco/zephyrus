@@ -12,6 +12,12 @@ import Data.Map (Map)
 import Data.Text (Text)
 import Servant ( Handler )
 
+-- The City data type, representing the name, the latitude and the longitude of a location
+data City = City { name :: Text
+                 , lat :: Double
+                 , lon :: Double
+                 } deriving (Show, Eq, Generic)
+
 -- The weather data type, representing the weather
 data Weather = Weather { date :: Day
                        , fahrenheitTemp :: Text
@@ -63,14 +69,16 @@ data CacheElement = WeatherCache Weather
                   | MoonCache Moon
                   deriving (Show, Eq)
 
+-- The statistical database, representing a mapping between "$city_$day" and the weather
+type StatDB = Map Text Weather
+
 -- The cache data type, representing a mapping between a city and its weather
 type ZCache = Map Text (CacheElement, UTCTime)
 
 -- The state of the weather cache between multiple requests
-newtype State = State { cache :: TVar ZCache}
+data State = State { zCache :: TVar ZCache
+                   , statDB :: TVar StatDB
+                   }
 
 -- The Reader monad for the state
 type AppM = ReaderT State Handler
-
--- The Coordinates data type, representing the latitude and longitude of a city
-type Coordinates = (Double, Double)

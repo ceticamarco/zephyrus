@@ -10,32 +10,41 @@ import Control.Monad.Trans.Reader (ask)
 import Control.Monad.IO.Class (liftIO)
 import qualified Data.Map as Map
 import System.Environment (lookupEnv)
-import Data.Text (Text, pack)
+import Data.Text (Text, pack, unpack)
 import Data.Maybe (fromMaybe)
 import Servant (throwError)
 import Text.Read (readMaybe)
 
 import Model (getCityCoords, getCityWeather, getCityMetrics, getCityWind, getCityForecast, getMoon)
-import Types (AppM, State(..), Weather(..), ZCache, CacheElement(..), Metrics(..), Wind(..), Forecast(..), Moon(..), Coordinates)
+import Statistics (insertStatistic)
+import Types (AppM, State(..), Weather(..), ZCache, StatDB, CacheElement(..), Metrics(..), Wind(..), Forecast(..), Moon(..), City)
 import Error (jsonError)
 
 isCacheExpired :: UTCTime -> Int -> UTCTime -> Bool
 isCacheExpired currentTime ttl timestamp =
     diffUTCTime currentTime timestamp > fromIntegral (ttl * 3600)
 
-handleCoordsResult :: Either Text Coordinates -> AppM Coordinates
-handleCoordsResult (Left err) = throwError $ jsonError 404 err
-handleCoordsResult (Right coords) = pure coords
+handleCityResult :: Either Text City -> AppM City
+handleCityResult (Left err) = throwError $ jsonError 404 err
+handleCityResult (Right city) = pure city
 
 handleResult :: Either Text a -> AppM a
 handleResult (Left err) = throwError $ jsonError 500 err
 handleResult (Right result) = pure result
 
+fmtTemperature :: Text -> Bool -> Text
+fmtTemperature temp isCelsius =
+    if isCelsius
+        then pack (unpack temp) <> "°C"
+        else pack (unpack temp) <> "°F"
+
 getWeather :: Text -> AppM Weather
 getWeather city = do
     -- Read from cache
-    State{cache = tCache} <- ask
+    State{zCache = tCache} <- ask
+    State{statDB = tDB} <- ask
     weatherCache <- liftIO $ readTVarIO tCache
+
     currentTime <- liftIO getCurrentTime
 
     -- Read TTL value from environment variable
@@ -45,29 +54,44 @@ getWeather city = do
     case Map.lookup (city <> "_weather") weatherCache of
         Just (WeatherCache weather, timestamp)
             | not (isCacheExpired currentTime timeToLive timestamp) -> pure weather
-        _ -> fetchWeather city tCache
+        _ -> fetchWeather city tCache tDB
     where
-        fetchWeather :: Text -> TVar ZCache -> AppM Weather
-        fetchWeather city' cache' = do
+        fetchWeather :: Text -> TVar ZCache -> TVar StatDB -> AppM Weather
+        fetchWeather city' cache' db = do
             -- Read API key from environment variable
             apiKeyEnv <- liftIO $ lookupEnv "ZEPHYRUS_TOKEN"
             let apiKey = maybe "" pack apiKeyEnv :: Text
 
+            -- Get Coordinates
             coordRes <- liftIO $ getCityCoords city' apiKey
-            coords <- handleCoordsResult coordRes
+            coords <- handleCityResult coordRes
+
+            -- Get Weather
             weatherRes <- liftIO $ getCityWeather coords apiKey
             weather <- handleResult weatherRes
+
+            -- Add result to the cache
             currTime <- liftIO getCurrentTime
             liftIO $ atomically $ modifyTVar' cache'
                 (Map.insert
                     (city' <> "_weather")
                     (WeatherCache weather, currTime))
-            pure weather
+
+            -- Insert statistics into the statistics database
+            insertStatistic db city' weather
+
+            -- Format temperature
+            let fmtWeather = weather { fahrenheitTemp = fmtTemperature (fahrenheitTemp weather) False
+                                     , celsiusTemp = fmtTemperature (celsiusTemp weather) True
+                                     }
+
+            -- Return the weather
+            pure fmtWeather
 
 getMetrics :: Text -> AppM Metrics
 getMetrics city = do
     -- Read from cache
-    State{cache = tCache} <- ask
+    State{zCache = tCache} <- ask
     metricsCache <- liftIO $ readTVarIO tCache
     currentTime <- liftIO getCurrentTime
 
@@ -86,10 +110,15 @@ getMetrics city = do
             apiKeyEnv <- liftIO $ lookupEnv "ZEPHYRUS_TOKEN"
             let apiKey = maybe "" pack apiKeyEnv :: Text
 
+            -- Get Coordinates
             coordRes <- liftIO $ getCityCoords city' apiKey
-            coords <- handleCoordsResult coordRes
+            coords <- handleCityResult coordRes
+
+            -- Get Metrics
             metricsRes <- liftIO $ getCityMetrics coords apiKey
             metrics <- handleResult metricsRes
+
+            -- Add result to the cache
             currTime <- liftIO getCurrentTime
             liftIO $ atomically $ modifyTVar' cache'
                 (Map.insert
@@ -100,7 +129,7 @@ getMetrics city = do
 getWind :: Text -> AppM Wind
 getWind city = do
     -- Read from cache
-    State{cache = tCache} <- ask
+    State{zCache = tCache} <- ask
     windCache <- liftIO $ readTVarIO tCache
     currentTime <- liftIO getCurrentTime
 
@@ -119,10 +148,15 @@ getWind city = do
             apiKeyEnv <- liftIO $ lookupEnv "ZEPHYRUS_TOKEN"
             let apiKey = maybe "" pack apiKeyEnv :: Text
 
+            -- Get Coordinates
             coordRes <- liftIO $ getCityCoords city' apiKey
-            coords <- handleCoordsResult coordRes
+            coords <- handleCityResult coordRes
+
+            -- Get Wind
             windRes <- liftIO $ getCityWind coords apiKey
             wind <- handleResult windRes
+
+            -- Add result to the cache
             currTime <- liftIO getCurrentTime
             liftIO $ atomically $ modifyTVar' cache'
                 (Map.insert
@@ -133,7 +167,7 @@ getWind city = do
 getForecast :: Text -> AppM Forecast
 getForecast city = do
     -- Read from cache
-    State{cache = tCache} <- ask
+    State{zCache = tCache} <- ask
     forecastCache <- liftIO $ readTVarIO tCache
     currentTime <- liftIO getCurrentTime
 
@@ -152,22 +186,33 @@ getForecast city = do
             apiKeyEnv <- liftIO $ lookupEnv "ZEPHYRUS_TOKEN"
             let apiKey = maybe "" pack apiKeyEnv :: Text
 
+            -- Get Coordinates
             coordRes <- liftIO $ getCityCoords city' apiKey
-            coords <- handleCoordsResult coordRes
+            coords <- handleCityResult coordRes
+
+            -- Get Forecast
             forecastRes <- liftIO $ getCityForecast coords apiKey
             fc <- handleResult forecastRes
 
+            -- Add result to the cache
             currTime <- liftIO getCurrentTime
             liftIO $ atomically $ modifyTVar' cache'
                 (Map.insert
                     (city' <> "_forecast")
                     (ForecastCache fc, currTime))
-            pure fc
+
+            -- Format temperature
+            let fmtForecast = fc { forecast = map (\weather ->
+                    weather { fahrenheitTemp = fmtTemperature (fahrenheitTemp weather) False
+                            , celsiusTemp = fmtTemperature (celsiusTemp weather) True}
+                            ) (forecast fc) }
+
+            pure fmtForecast
             
 getMoonPhase :: AppM Moon
 getMoonPhase = do
     -- Read from cache
-    State{cache = tCache} <- ask
+    State{zCache = tCache} <- ask
     moonCache <- liftIO $ readTVarIO tCache
     currentTime <- liftIO getCurrentTime
 
@@ -186,8 +231,11 @@ getMoonPhase = do
             apiKeyEnv <- liftIO $ lookupEnv "ZEPHYRUS_TOKEN"
             let apiKey = maybe "" pack apiKeyEnv :: Text
 
+            -- Get Moon Phase
             moonPhaseRes <- liftIO $ getMoon apiKey
             moon <- handleResult moonPhaseRes
+
+            -- Add result to the cache
             currTime <- liftIO getCurrentTime
             liftIO $ atomically $ modifyTVar' cache'
                 (Map.insert
