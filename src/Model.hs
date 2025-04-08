@@ -13,12 +13,13 @@ import Text.Printf (printf)
 import Data.Scientific (toRealFloat)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Time.Clock (utctDay)
+import Data.Time (Day)
 import Network.HTTP.Req ((/:), (=:), req, https, runReq, defaultHttpConfig, jsonResponse, responseBody)
 import qualified Network.HTTP.Req as Req
 import qualified Data.Map as Map
 
-import Types (Weather(..), Metrics(..), Wind(..), Forecast(..), Moon(..), City(..), StatResult(..), StatDB)
-import Statistics (isKeyInvalid, mean)
+import Types (Weather(..), Metrics(..), Wind(..), Forecast(..), Moon(..), City(..), StatResult(..), WeatherAnomaly(..), StatDB)
+import Statistics (isKeyInvalid, mean, stdDev, median, mode, detectAnomalies)
 
 extractField :: Text -> [Value] -> Parser Text
 extractField field (x:_) = withObject "weather[0]" (.: fromText field) x
@@ -284,7 +285,6 @@ getCityForecast city apiKey = runReq defaultHttpConfig $ do
             let utcTime = posixSecondsToUTCTime (fromIntegral (unixTs :: Int))
             let weatherDate = utctDay utcTime
 
-
             -- Get emoji from weather condition
             let isNight = "n" `isSuffixOf` icon
             let emojiVal = getEmoji conditionVal isNight
@@ -347,23 +347,33 @@ getMoon apiKey = runReq defaultHttpConfig $ do
 getCityStatistics :: Text -> StatDB -> IO (Either Text StatResult)
 getCityStatistics city db = do
     isInvalid <- isKeyInvalid db city
-
+    
     if isInvalid
-        then pure $ Left "Not enough data"
+        then pure $ Left "Not enough data, can't apply statistics"
         else do
-            -- Extract statistics from the database
+            -- Extract records from the database
             let stats = map snd $ filter (\(key, _) -> city `isSuffixOf` key) (Map.toList db)
-                celsiusTemps = mapMaybe (readMaybe . unpack . celsiusTemp) stats :: [Double]
-            let tempMean = Statistics.mean celsiusTemps
-            -- build the result
-            let result = StatResult
-                    { Types.mean = tempMean
-                    , Types.min = 0
-                    , Types.max = 0
-                    , count = 0
-                    , sdev = 0
-                    , median = 0
-                    , mode = 0
-                    , anomaly = Nothing
+                temps = mapMaybe (readMaybe . unpack . celsiusTemp) stats :: [Double]
+                anomalies = detectAnomalies stats
+
+            -- Compute statistics
+            let res = StatResult
+                    { Types.mean = roundValue $ Statistics.mean temps
+                    , Types.min = minimum temps
+                    , Types.max = maximum temps
+                    , count = length temps
+                    , Types.stdDev = roundValue $ Statistics.stdDev temps
+                    , Types.median = Statistics.median temps
+                    , Types.mode = Statistics.mode temps
+                    , anomaly = parseAnomalies anomalies
                     }
-            pure $ Right result
+            pure $ Right res
+    where
+        roundValue :: Double -> Double
+        roundValue x = fromIntegral (round (x * 10000) :: Int) / 10000 -- 10^4 = 10000
+
+        parseAnomalies :: [(Day, Double)] -> Maybe [WeatherAnomaly]
+        parseAnomalies anomalies =
+            if null anomalies
+                then Nothing
+                else Just (map (uncurry WeatherAnomaly) anomalies)

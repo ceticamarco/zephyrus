@@ -74,7 +74,6 @@ type StatDB = Map Text Weather
 
 data WeatherAnomaly = WeatherAnomaly { anomalyDate :: Day
                                      , anomalyTemp :: Double
-                                     , anomalyDesc :: Text
                                      } deriving (Show, Eq, Generic)
 instance ToJSON WeatherAnomaly
 instance FromJSON WeatherAnomaly
@@ -83,10 +82,10 @@ data StatResult = StatResult { min :: Double
                              , max :: Double
                              , count :: Int
                              , mean :: Double
-                             , sdev :: Double
+                             , stdDev :: Double
                              , median :: Double
                              , mode :: Double
-                             , anomaly :: Maybe WeatherAnomaly
+                             , anomaly :: Maybe [WeatherAnomaly]
                              } deriving (Show, Eq, Generic)
 instance ToJSON StatResult
 instance FromJSON StatResult

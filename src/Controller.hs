@@ -4,7 +4,6 @@
 module Controller where
 
 import Data.Time.Clock (UTCTime, getCurrentTime, diffUTCTime)
-import Data.Time (fromGregorian)
 import GHC.Conc (atomically)
 import Control.Concurrent.STM.TVar (TVar, readTVarIO, modifyTVar')
 import Control.Monad.Trans.Reader (ask)
