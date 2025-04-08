@@ -69,8 +69,27 @@ data CacheElement = WeatherCache Weather
                   | MoonCache Moon
                   deriving (Show, Eq)
 
--- The statistical database, representing a mapping between "$city_$day" and the weather
+-- The statistical database, representing a mapping between "$city" and its weather
 type StatDB = Map Text Weather
+
+data WeatherAnomaly = WeatherAnomaly { anomalyDate :: Day
+                                     , anomalyTemp :: Double
+                                     , anomalyDesc :: Text
+                                     } deriving (Show, Eq, Generic)
+instance ToJSON WeatherAnomaly
+instance FromJSON WeatherAnomaly
+
+data StatResult = StatResult { min :: Double
+                             , max :: Double
+                             , count :: Int
+                             , mean :: Double
+                             , sdev :: Double
+                             , median :: Double
+                             , mode :: Double
+                             , anomaly :: Maybe WeatherAnomaly
+                             } deriving (Show, Eq, Generic)
+instance ToJSON StatResult
+instance FromJSON StatResult
 
 -- The cache data type, representing a mapping between a city and its weather
 type ZCache = Map Text (CacheElement, UTCTime)

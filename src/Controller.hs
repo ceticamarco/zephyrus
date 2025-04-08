@@ -4,6 +4,7 @@
 module Controller where
 
 import Data.Time.Clock (UTCTime, getCurrentTime, diffUTCTime)
+import Data.Time (fromGregorian)
 import GHC.Conc (atomically)
 import Control.Concurrent.STM.TVar (TVar, readTVarIO, modifyTVar')
 import Control.Monad.Trans.Reader (ask)
@@ -15,9 +16,9 @@ import Data.Maybe (fromMaybe)
 import Servant (throwError)
 import Text.Read (readMaybe)
 
-import Model (getCityCoords, getCityWeather, getCityMetrics, getCityWind, getCityForecast, getMoon)
+import Model (getCityCoords, getCityWeather, getCityMetrics, getCityWind, getCityForecast, getMoon, getCityStatistics)
 import Statistics (insertStatistic)
-import Types (AppM, State(..), Weather(..), ZCache, StatDB, CacheElement(..), Metrics(..), Wind(..), Forecast(..), Moon(..), City)
+import Types (AppM, State(..), Weather(..), ZCache, StatDB, CacheElement(..), Metrics(..), Wind(..), Forecast(..), Moon(..), StatResult(..), City)
 import Error (jsonError)
 
 isCacheExpired :: UTCTime -> Int -> UTCTime -> Bool
@@ -84,7 +85,6 @@ getWeather city = do
             let fmtWeather = weather { fahrenheitTemp = fmtTemperature (fahrenheitTemp weather) False
                                      , celsiusTemp = fmtTemperature (celsiusTemp weather) True
                                      }
-
             -- Return the weather
             pure fmtWeather
 
@@ -242,3 +242,14 @@ getMoonPhase = do
                     "default_moonphase"
                     (MoonCache moon, currTime))
             pure moon
+
+getStatistics :: Text -> AppM StatResult
+getStatistics city = do
+    -- Read from cache
+    State{statDB = tDB} <- ask
+    db <- liftIO $ readTVarIO tDB
+
+    -- Get city statistics
+    cityStatsRes <- liftIO $ getCityStatistics city db
+    
+    handleResult cityStatsRes

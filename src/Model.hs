@@ -6,15 +6,19 @@ import Data.Aeson (Value, withObject, withArray)
 import Data.Aeson.Types (Value(..), (.:), parseEither, Parser)
 import Data.Aeson.Key (fromText)
 import qualified Data.Vector as V
-import Data.Text (Text, pack, isSuffixOf)
+import Data.Text (Text, pack, unpack, isSuffixOf)
+import Text.Read (readMaybe)
+import Data.Maybe (mapMaybe)
 import Text.Printf (printf)
 import Data.Scientific (toRealFloat)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Time.Clock (utctDay)
 import Network.HTTP.Req ((/:), (=:), req, https, runReq, defaultHttpConfig, jsonResponse, responseBody)
 import qualified Network.HTTP.Req as Req
+import qualified Data.Map as Map
 
-import Types (Weather(..), Metrics(..), Wind(..), Forecast(..), Moon(..), City(..))
+import Types (Weather(..), Metrics(..), Wind(..), Forecast(..), Moon(..), City(..), StatResult(..), StatDB)
+import Statistics (isKeyInvalid, mean)
 
 extractField :: Text -> [Value] -> Parser Text
 extractField field (x:_) = withObject "weather[0]" (.: fromText field) x
@@ -339,3 +343,27 @@ getMoon apiKey = runReq defaultHttpConfig $ do
             | moonValue == 0.75 = ("🌗", "Last Quarter")
             | moonValue > 0.75 && moonValue < 1 = ("🌘", "Waning Crescent")
             | otherwise = ("❓", "Unknown moon phase")
+
+getCityStatistics :: Text -> StatDB -> IO (Either Text StatResult)
+getCityStatistics city db = do
+    isInvalid <- isKeyInvalid db city
+
+    if isInvalid
+        then pure $ Left "Not enough data"
+        else do
+            -- Extract statistics from the database
+            let stats = map snd $ filter (\(key, _) -> city `isSuffixOf` key) (Map.toList db)
+                celsiusTemps = mapMaybe (readMaybe . unpack . celsiusTemp) stats :: [Double]
+            let tempMean = Statistics.mean celsiusTemps
+            -- build the result
+            let result = StatResult
+                    { Types.mean = tempMean
+                    , Types.min = 0
+                    , Types.max = 0
+                    , count = 0
+                    , sdev = 0
+                    , median = 0
+                    , mode = 0
+                    , anomaly = Nothing
+                    }
+            pure $ Right result
