@@ -11,6 +11,9 @@ RUN cabal update
 COPY ./zephyrus.cabal /opt/zephyrus/zephyrus.cabal
 RUN cabal build --only-dependencies
 
+# Run unit tests
+RUN cabal test
+
 # Build the rest of the application
 COPY . /opt/zephyrus
 RUN cabal install

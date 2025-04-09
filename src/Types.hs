@@ -57,6 +57,7 @@ instance FromJSON Forecast
 -- The moon data type, representing the moon phase
 data Moon = Moon { moonEmoji :: Text
                  , moonPhase :: Text
+                 , moonProgress :: Text
                  } deriving (Show, Eq, Generic)
 instance ToJSON Moon
 instance FromJSON Moon

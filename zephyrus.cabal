@@ -45,3 +45,15 @@ executable zephyrus
                       , text
     hs-source-dirs:   app
     default-language: Haskell2010
+
+test-suite zephyrus-test
+    type:             exitcode-stdio-1.0
+    main-is:          Tests.hs
+    other-modules:    StatsTests
+    hs-source-dirs:   test
+    build-depends:     base >= 4.7 && <5
+                      , zephyrus-lib
+                      , HUnit
+    default-language: Haskell2010
+    ghc-options:      -Wall -Wextra -Werror
+    

@@ -1,7 +1,7 @@
 <div align="center">
 <h1>Zephyrus 🌲</h1>
     
-<h6><i>HTTP weather forecast service</i></h6>
+<h6><i>Web service for meteorological statistics</i></h6>
 
 [![](https://github.com/ceticamarco/zephyrus/actions/workflows/docker.yml/badge.svg)](https://github.com/ceticamarco/zephyrus/actions/workflows/docker.yml)
 [![](https://github.com/ceticamarco/zephyrus/actions/workflows/linter.yml/badge.svg)](https://github.com/ceticamarco/zephyrus/actions/workflows/linter.yml)
@@ -20,7 +20,7 @@ This service communicates through a JSON API, making
 it suitable for use in any kind of project or device. I already use it on my phone,
 on my terminal, on the tmux's status bar and on a couple of smart bedside alarm clocks I've built.
 
-## Usage
+## Basic Usage
 As stated before, Zephyrus communicates via HTTP using the JSON format; therefore, you can
 query it through any kind of HTTP client such as cURL. Below you can find some examples of use.
 
@@ -35,7 +35,7 @@ will yield the following:
 
 ```json
 {
-  "celsiusTemp": "+21°C",
+  "celsiusTemp": "21°C",
   "condEmoji": "☀️",
   "condition": "Clear",
   "date": "2025-03-31",
@@ -57,8 +57,8 @@ will yield:
 
 ```json
 {
-  "celsiusDewPoint": "+13°C",
-  "fahrenheitDewPoint": "+55°F",
+  "celsiusDewPoint": "13°C",
+  "fahrenheitDewPoint": "55°F",
   "humidity": "94%",
   "pressure": "1020 hPa",
   "uvIndex": 0,
@@ -90,7 +90,7 @@ The `/forecast/:city` route allows you to request the weather forecast
 of the next five days(that is, an array containing five weather objects). For example,
 
 ```sh
-$  curl -s 'http://127.0.0.1:3000/forecast/paris' | jq
+$  curl -s 'http://127.0.0.1:3000/forecast/Yakutsk' | jq
 ```
 
 will yield
@@ -99,18 +99,18 @@ will yield
 {
   "forecast": [
     {
-      "celsiusTemp": "+13°C",
-      "condEmoji": "☀️",
-      "condition": "Clear",
-      "date": "2025-03-31",
-      "fahrenheitTemp": "+55°F"
+      "celsiusTemp": "0°C",
+      "condEmoji": "☃️",
+      "condition": "Snow",
+      "date": "2025-04-09",
+      "fahrenheitTemp": "32°F"
     },
     {
-      "celsiusTemp": "+13°C",
-      "condEmoji": "☀️",
-      "condition": "Clear",
-      "date": "2025-04-01",
-      "fahrenheitTemp": "+55°F"
+      "celsiusTemp": "-3°C",
+      "condEmoji": "☃️",
+      "condition": "Snow",
+      "date": "2025-04-10",
+      "fahrenheitTemp": "26°F"
     },
   ]
 }
@@ -128,10 +128,111 @@ will yield
 
 ```json
 {
-  "moonEmoji": "🌒",
-  "moonPhase": "Waxing Crescent"
+  "moonEmoji": "🌔",
+  "moonPhase": "Waxing Gibbous",
+  "moonProgress": "89%"
 }
 ```
+
+To convert OpenWeatherMap's moon phase value to the illumination percentage, 
+I've used the following formula:
+
+$$
+  \sin(\pi \theta)^2 \times 100
+$$
+
+where $\theta$ represent the moon phase value.
+
+## Statistical analysis
+In addition to the previous routes, Zephyrus provides another endpoint, called `/stats/:city`,
+which can be used to retrieve additional statistics about the weather of the
+previous days. This includes the arithmetical mean of the temperatures, 
+the maximum and the minimum values, the median, the mode and the standard deviation.
+
+This endpoint becomes available only after the system has gathered sufficient
+_updated_ data; that if and only if there are **at least** two meteorological
+records for a given location, and they are **within the previous 48 hours**. If these
+two conditions aren't met, Zephyrus will refuse to provide a statistical report.
+
+After enough data has been recorded in the in-memory database, you will be able
+to retrieve the statistics, for example:
+
+```sh
+$ curl -s 'http://127.0.0.1:3000/stats/berlin'
+```
+
+will yield(not real data):
+
+```json
+{                                                                                 
+  "anomaly": null,                      
+  "count": 12,
+  "max": 30,
+  "mean": 13.9167,                       
+  "median": 15.25,                       
+  "min": -15,
+  "mode": 16,
+  "stdDev": 9.6562
+}
+```
+
+After enough data has been recorded, Zephyrus can also detect and report
+temperature anomalies using a built-in statistical model(more about that below).
+
+For instance, two temperature spikes(high and low) of `+30°C` and `-15°C` will
+be flagged as anomalous and included in
+the statistical report(again, the data is made up):
+
+```json
+{                                                                                 
+  "anomaly": [                                                                    
+    {                                                                             
+      "anomalyDate": "2025-04-06",                                                
+      "anomalyTemp": 30                    
+    },                                                                            
+    {
+      "anomalyDate": "2025-04-07",         
+      "anomalyTemp": -15                   
+    }                                    
+  ],                                     
+  "count": 12,
+  "max": 30,
+  "mean": 13.9167,                       
+  "median": 15.25,                       
+  "min": -15,
+  "mode": 16,
+  "stdDev": 9.6562
+}  
+```
+
+### Anomaly Detection
+The anomaly detection model is based on a modified version
+of the [Z-Score](https://en.wikipedia.org/wiki/Standard_score) algorithm
+that uses the [Median Absolute Deviation](https://en.wikipedia.org/wiki/Median_absolute_deviation) to measure variability in a given sample of quantitative
+data. The entire procedure can be summarized as follows(let $X$ be the dataset):
+
+1. Compute the median $\tilde{x} = \text{median}({X})$;  
+2. Compute $\text{MAD} = \text{median}\{ |x_i - \tilde{x}| : \forall i = 0, \dots, n-1 \}$
+3. Compute the (modified)Z-score
+$$
+  z_i = \frac{0.6745 (x_i - \tilde{x})}{\text{MAD}}
+  \quad \forall i = 0, \dots, n-1
+$$
+4. Flag $x_i$ as an outlier if $|z_i| > 3.5$
+
+Here, $\Phi^{-1}(3/4) = \Phi^{-1}(0.75) \approx 0.6745$ reflects the fact
+that 75% of values lie within ~0.6745 standard deviation and 3.5 represent a fixed
+threshold value.
+
+> [!IMPORTANT]
+> The anomaly detection system works under the assumption that the weather
+> data is normally distributed(at least roughly), this might not always be the case
+> on datasets sampled over a short time window. For accurate result, collect at least
+> two weeks of meteorological data.
+
+The in-memory statistics database is updated each time the `/weather/:city` route
+is consumed and is reset at each restart. At the time being, there is no plan
+to make data gathering non-volatile.
 
 ## Embedded Cache System
 In order to minimize the amount of calls made to the OpenWeatherMap servers, Zephyrus

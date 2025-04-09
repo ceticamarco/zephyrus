@@ -56,7 +56,7 @@ median temps =
         then (sorted !! (mid - 1) + sorted !! mid) / 2
         else sorted !! mid
 
--- This method will always return the lowest mode
+-- This method will always return the largest mode
 -- on a multi-modal dataset
 mode :: [Double] -> Double
 mode [] = 0

@@ -119,8 +119,8 @@ getCityWeather city appid = runReq defaultHttpConfig $ do
 
             pure $ Weather
                 { date = weatherDate
-                , fahrenheitTemp = pack $ show fahrenheitVal
-                , celsiusTemp = pack $ show celsiusVal
+                , fahrenheitTemp = (pack . show) fahrenheitVal
+                , celsiusTemp = (pack . show) celsiusVal
                 , condition = conditionVal
                 , condEmoji = emojiVal 
                 })
@@ -159,12 +159,12 @@ getCityMetrics city appid = runReq defaultHttpConfig $ do
             -- Round UV index
             let uv = round (uvi :: Double) :: Int
 
-            pure $ Metrics { humidity = pack $ show (humidity' :: Int)
-                           , pressure = pack $ show (pressure' :: Int)
-                           , celsiusDewPoint = pack $ show celsiusDewPoint'
-                           , fahrenheitDewPoint = pack $ show fahrenheitDewPoint'
+            pure $ Metrics { humidity = (pack . show) (humidity' :: Int)
+                           , pressure = (pack . show) (pressure' :: Int)
+                           , celsiusDewPoint = (pack . show) celsiusDewPoint'
+                           , fahrenheitDewPoint = (pack . show) fahrenheitDewPoint'
                            , uvIndex = uv
-                           , visibility = pack $ show (round (vs / 1000 :: Double) :: Int)
+                           , visibility = (pack . show) (round (vs / 1000 :: Double) :: Int)
                            }
             )
 
@@ -201,8 +201,8 @@ getCityWind city apiKey = runReq defaultHttpConfig $ do
             let wind_kmh = roundValue 2 $ windSpeed * 3.6 :: Double
             let wind_mph = roundValue 2 $ windSpeed * 2.23694 :: Double
 
-            pure $ Wind { metricSpeed = pack $ show wind_kmh
-                        , imperialSpeed = pack $ show wind_mph
+            pure $ Wind { metricSpeed = (pack . show) wind_kmh
+                        , imperialSpeed = (pack . show) wind_mph
                         , direction = windDirection
                         , arrow = windArrow
                         }
@@ -285,8 +285,8 @@ getCityForecast city apiKey = runReq defaultHttpConfig $ do
 
             pure $ Weather
                 { date = weatherDate
-                , fahrenheitTemp = pack $ show fahrenheitVal
-                , celsiusTemp = pack $ show celsiusVal
+                , fahrenheitTemp = (pack . show) fahrenheitVal
+                , celsiusTemp = (pack . show) celsiusVal
                 , condition = conditionVal
                 , condEmoji = emojiVal 
                 }
@@ -319,7 +319,15 @@ getMoon apiKey = runReq defaultHttpConfig $ do
 
             -- Map moon phase to emoji and phase description
             let (icon, phase) = getMoonPhase moonValue
-            pure $ Moon icon phase)
+            
+            -- Approximate moon illumination percentage using moon phase
+            let moonPercentage = getMoonPercentage moonValue
+
+            pure $ Moon { moonEmoji = icon
+                        , moonPhase = phase
+                        , moonProgress = moonPercentage
+                        }
+            )
 
         {- 0 and 1 are 'new moon',
         0.25 is 'first quarter moon',
@@ -337,6 +345,13 @@ getMoon apiKey = runReq defaultHttpConfig $ do
             | moonValue == 0.75 = ("🌗", "Last Quarter")
             | moonValue > 0.75 && moonValue < 1 = ("🌘", "Waning Crescent")
             | otherwise = ("❓", "Unknown moon phase")
+
+        -- Convert OpenWeatherMap moon value to percentage using
+        -- sin(\pi * moon_value)^2
+        getMoonPercentage :: Double -> Text
+        getMoonPercentage val =
+            let percentage = round ((sin (pi * val) ** 2) * 100) :: Int
+            in (pack . show) percentage <> "%"
 
 getCityStatistics :: Text -> StatDB -> IO (Either Text StatResult)
 getCityStatistics city db = do
