@@ -87,8 +87,8 @@ robustZScore temps =
         threshold = 3.5 -- Standard threshold for MAD ZScore algorithms
     in if mad == 0 then []
        else [ (i, x) | (i, x) <- zip [0..] temps
-                     , let mz = 0.6745 * (x - med) / mad -- Φ⁻¹(3/4) ≈ 0.6745
-                     , abs mz > threshold ]
+                     , let zScore = 0.6745 * (x - med) / mad -- Φ⁻¹(3/4) ≈ 0.6745
+                     , abs zScore > threshold ]
 
 detectAnomalies :: [Weather] -> [(Day, Double)]
 detectAnomalies weatherList =

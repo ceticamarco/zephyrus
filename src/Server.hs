@@ -21,7 +21,7 @@ type WeatherAPI =
 api :: Proxy WeatherAPI
 api = Proxy
 
-server ::  ServerT WeatherAPI AppM
+server :: ServerT WeatherAPI AppM
 server = getWeather   :<|>
          getMetrics   :<|>
          getWind      :<|>

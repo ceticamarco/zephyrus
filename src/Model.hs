@@ -9,7 +9,6 @@ import qualified Data.Vector as V
 import Data.Text (Text, pack, unpack, isSuffixOf)
 import Text.Read (readMaybe)
 import Data.Maybe (mapMaybe)
-import Text.Printf (printf)
 import Data.Scientific (toRealFloat)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Time.Clock (utctDay)
@@ -24,6 +23,10 @@ import Statistics (isKeyInvalid, mean, stdDev, median, mode, detectAnomalies)
 extractField :: Text -> [Value] -> Parser Text
 extractField field (x:_) = withObject "weather[0]" (.: fromText field) x
 extractField _ _ = fail "Weather array is empty"
+
+roundValue :: Int -> Double -> Double
+roundValue n x = fromIntegral (round (x * t) :: Int) / t
+    where t = 10^n
 
 getEmoji :: Text -> Bool -> Text
 getEmoji condition' isNight =
@@ -153,27 +156,17 @@ getCityMetrics city appid = runReq defaultHttpConfig $ do
             let celsiusDewPoint' = round (dewPoint :: Double) :: Int
             let fahrenheitDewPoint' = (celsiusDewPoint' * 9 `div` 5) + 32
 
-            -- Build pressure string
-            let pressureStr = pack $ printf "%s hPa" (show (pressure' :: Int))
-
-            -- Build humidity string
-            let humidityStr = pack $ printf "%s%%" (show (humidity' :: Int))
-
             -- Round UV index
             let uv = round (uvi :: Double) :: Int
 
-            -- Build visibility string
-            let visInKm = pack $ printf "%dkm" (round (vs / 1000 :: Double) :: Int)
-
-            -- Build dew point strings in metric and imperial units
-            let celsiusStr = pack $ printf "%s%s°C"
-                    (if celsiusDewPoint' > 0 then "+" else "" :: String)
-                    (show celsiusDewPoint')
-            let fahrenheitStr = pack $ printf "%s%s°F"
-                    (if fahrenheitDewPoint' > 0 then "+" else "" :: String)
-                    (show fahrenheitDewPoint')
-
-            pure $ Metrics humidityStr pressureStr celsiusStr fahrenheitStr uv visInKm)
+            pure $ Metrics { humidity = pack $ show (humidity' :: Int)
+                           , pressure = pack $ show (pressure' :: Int)
+                           , celsiusDewPoint = pack $ show celsiusDewPoint'
+                           , fahrenheitDewPoint = pack $ show fahrenheitDewPoint'
+                           , uvIndex = uv
+                           , visibility = pack $ show (round (vs / 1000 :: Double) :: Int)
+                           }
+            )
 
 getCityWind :: City -> Text -> IO (Either Text Wind)
 getCityWind city apiKey = runReq defaultHttpConfig $ do
@@ -205,14 +198,15 @@ getCityWind city apiKey = runReq defaultHttpConfig $ do
             -- Represent wind speed to km/s and MPH from m/s
             -- 1 m/s = 2.23694 mph
             -- 1 m/s = 3.6 km/h
-            let wind_kmh = (windSpeed * 3.6 :: Double)
-            let wind_mph = (windSpeed * 2.23694 :: Double)
+            let wind_kmh = roundValue 2 $ windSpeed * 3.6 :: Double
+            let wind_mph = roundValue 2 $ windSpeed * 2.23694 :: Double
 
-            -- Build wind speed string in metric and imperial units
-            let windSpeedMetric = pack $ printf "%.2f km/h" wind_kmh
-            let windSpeedImperial = pack $ printf "%.2f mph" wind_mph
-
-            pure $ Wind windSpeedMetric windSpeedImperial windDirection windArrow)
+            pure $ Wind { metricSpeed = pack $ show wind_kmh
+                        , imperialSpeed = pack $ show wind_mph
+                        , direction = windDirection
+                        , arrow = windArrow
+                        }
+            )
             
         getCardinalDir :: Double -> (Text, Text)
         getCardinalDir windDeg =
@@ -349,7 +343,7 @@ getCityStatistics city db = do
     isInvalid <- isKeyInvalid db city
     
     if isInvalid
-        then pure $ Left "Not enough data, can't apply statistics"
+        then pure $ Left "Insufficient or outdated data to perform statistical analysis"
         else do
             -- Extract records from the database
             let stats = map snd $ filter (\(key, _) -> city `isSuffixOf` key) (Map.toList db)
@@ -358,20 +352,17 @@ getCityStatistics city db = do
 
             -- Compute statistics
             let res = StatResult
-                    { Types.mean = roundValue $ Statistics.mean temps
+                    { Types.mean = roundValue 4 $ Statistics.mean temps
                     , Types.min = minimum temps
                     , Types.max = maximum temps
                     , count = length temps
-                    , Types.stdDev = roundValue $ Statistics.stdDev temps
+                    , Types.stdDev = roundValue 4 $ Statistics.stdDev temps
                     , Types.median = Statistics.median temps
                     , Types.mode = Statistics.mode temps
                     , anomaly = parseAnomalies anomalies
                     }
             pure $ Right res
     where
-        roundValue :: Double -> Double
-        roundValue x = fromIntegral (round (x * 10000) :: Int) / 10000 -- 10^4 = 10000
-
         parseAnomalies :: [(Day, Double)] -> Maybe [WeatherAnomaly]
         parseAnomalies anomalies =
             if null anomalies

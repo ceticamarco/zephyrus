@@ -11,6 +11,7 @@ import Control.Monad.IO.Class (liftIO)
 import qualified Data.Map as Map
 import System.Environment (lookupEnv)
 import Data.Text (Text, pack, unpack)
+import Text.Printf (printf)
 import Data.Maybe (fromMaybe)
 import Servant (throwError)
 import Text.Read (readMaybe)
@@ -38,6 +39,21 @@ fmtTemperature temp isCelsius =
         then pack (unpack temp) <> "°C"
         else pack (unpack temp) <> "°F"
 
+fmtWindSpeed :: Text -> Bool -> Text
+fmtWindSpeed speed isMetric =
+    if isMetric
+        then pack (unpack speed) <> " km/h"
+        else pack (unpack speed) <> " mph"
+
+fmtHumidity :: Text -> Text
+fmtHumidity val = pack $ printf "%s%%" val
+
+fmtPressure :: Text -> Text
+fmtPressure val = pack $ printf "%s hPa" val
+
+fmtVisibility :: Text -> Text
+fmtVisibility val = pack $ printf "%skm" val
+
 getWeather :: Text -> AppM Weather
 getWeather city = do
     -- Read from cache
@@ -53,7 +69,12 @@ getWeather city = do
 
     case Map.lookup (city <> "_weather") weatherCache of
         Just (WeatherCache weather, timestamp)
-            | not (isCacheExpired currentTime timeToLive timestamp) -> pure weather
+            | not (isCacheExpired currentTime timeToLive timestamp) -> do
+                -- Format temperature
+                let fmtWeather = weather { fahrenheitTemp = fmtTemperature (fahrenheitTemp weather) False
+                                         , celsiusTemp = fmtTemperature (celsiusTemp weather) True
+                                         }
+                pure fmtWeather
         _ -> fetchWeather city tCache tDB
     where
         fetchWeather :: Text -> TVar ZCache -> TVar StatDB -> AppM Weather
@@ -100,7 +121,16 @@ getMetrics city = do
 
     case Map.lookup (city <> "_metrics") metricsCache of
         Just (MetricsCache metrics, timestamp)
-            | not (isCacheExpired currentTime timeToLive timestamp) -> pure metrics
+            | not (isCacheExpired currentTime timeToLive timestamp) -> do
+                -- Format metrics
+                let fmtMetrics = metrics { humidity = fmtHumidity (humidity metrics)
+                                         , pressure = fmtPressure (pressure metrics) 
+                                         , celsiusDewPoint = fmtTemperature (celsiusDewPoint metrics) True
+                                         , fahrenheitDewPoint = fmtTemperature (fahrenheitDewPoint metrics) False 
+                                         -- UV index left unchanged
+                                         , visibility = fmtVisibility (visibility metrics)
+                                         }
+                pure fmtMetrics
         _ -> fetchMetrics city tCache
     where
         fetchMetrics :: Text -> TVar ZCache -> AppM Metrics
@@ -123,7 +153,16 @@ getMetrics city = do
                 (Map.insert
                     (city' <> "_metrics")
                     (MetricsCache metrics, currTime))
-            pure metrics
+
+            -- Format metrics
+            let fmtMetrics = metrics { humidity = fmtHumidity (humidity metrics)
+                                     , pressure = fmtPressure (pressure metrics) 
+                                     , celsiusDewPoint = fmtTemperature (celsiusDewPoint metrics) True
+                                     , fahrenheitDewPoint = fmtTemperature (fahrenheitDewPoint metrics) False 
+                                     -- UV index left unchanged
+                                     , visibility = fmtVisibility (visibility metrics)
+                                     }
+            pure fmtMetrics
 
 getWind :: Text -> AppM Wind
 getWind city = do
@@ -138,7 +177,12 @@ getWind city = do
 
     case Map.lookup (city <> "_wind") windCache of
         Just (WindCache wind, timestamp)
-            | not (isCacheExpired currentTime timeToLive timestamp) -> pure wind
+            | not (isCacheExpired currentTime timeToLive timestamp) -> do
+                -- format wind
+                let fmtWind = wind { metricSpeed = fmtWindSpeed (metricSpeed wind) True
+                                   , imperialSpeed = fmtWindSpeed (imperialSpeed wind) False
+                                   }
+                pure fmtWind
         _ -> fetchWind city tCache
     where
         fetchWind :: Text -> TVar ZCache -> AppM Wind
@@ -161,7 +205,12 @@ getWind city = do
                 (Map.insert
                     (city' <> "_wind")
                     (WindCache wind, currTime))
-            pure wind
+
+            -- format wind
+            let fmtWind = wind { metricSpeed = fmtWindSpeed (metricSpeed wind) True
+                               , imperialSpeed = fmtWindSpeed (imperialSpeed wind) False
+                               }
+            pure fmtWind
 
 getForecast :: Text -> AppM Forecast
 getForecast city = do
@@ -176,7 +225,13 @@ getForecast city = do
 
     case Map.lookup (city <> "_forecast") forecastCache of
         Just (ForecastCache fc, timestamp)
-            | not (isCacheExpired currentTime timeToLive timestamp) -> pure fc
+            | not (isCacheExpired currentTime timeToLive timestamp) -> do
+                -- Format forecast
+                let fmtForecast = fc { forecast = map (\weather -> 
+                    weather { fahrenheitTemp = fmtTemperature (fahrenheitTemp weather) False
+                            , celsiusTemp = fmtTemperature (celsiusTemp weather) True}
+                            ) (forecast fc) }
+                pure fmtForecast
         _ -> fetchForecast city tCache
     where
         fetchForecast :: Text -> TVar ZCache -> AppM Forecast
@@ -200,7 +255,7 @@ getForecast city = do
                     (city' <> "_forecast")
                     (ForecastCache fc, currTime))
 
-            -- Format temperature
+            -- Format forecast
             let fmtForecast = fc { forecast = map (\weather ->
                     weather { fahrenheitTemp = fmtTemperature (fahrenheitTemp weather) False
                             , celsiusTemp = fmtTemperature (celsiusTemp weather) True}
