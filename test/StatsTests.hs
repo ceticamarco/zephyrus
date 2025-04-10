@@ -33,8 +33,8 @@ testMode = TestList [
     "Multi-modal" ~: 3.0 ~=? mode [1.0, 1.0, 2.0, 3.0, 3.0]
     ]
 
--- (roughly)Binomial dataset representing normal
--- (ie without anomalies) temperatures
+-- Gaussian distributed dataset representing "normal"
+-- temperatures(i.e., without anomalies)
 normalTemps :: [Double]
 normalTemps = [
     18.0, 19.0, 19.0, 20.0, 20.0, 20.0, 21.0, 21.0, 21.0, 21.0,
