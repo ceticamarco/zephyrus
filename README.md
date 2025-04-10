@@ -211,17 +211,29 @@ of the [Z-Score](https://en.wikipedia.org/wiki/Standard_score) algorithm
 that uses the [Median Absolute Deviation](https://en.wikipedia.org/wiki/Median_absolute_deviation) to measure variability in a given sample of quantitative
 data. The entire procedure can be summarized as follows(let $X$ be the dataset):
 
-1. Compute the median $\tilde{x} = \text{median}({X})$;  
-2. Compute $\text{MAD} = \text{median}\{ |x_i - \tilde{x}| : \forall i = 0, \dots, n-1 \}$
-3. Compute the (modified)Z-score
+Compute the median
+
+$$
+    \tilde{x} = \text{median}({X})
+$$
+
+Compute The median absolute deviation
+
+$$
+  \text{MAD} = \text{median}\{ |x_i - \tilde{x}| : \forall i = 0, \dots, n-1 \}
+$$
+
+Compute the (modified)Z-score
+
 $$
   z_i = \frac{0.6745 (x_i - \tilde{x})}{\text{MAD}}
   \quad \forall i = 0, \dots, n-1
 $$
-4. Flag $x_i$ as an outlier if $|z_i| > 3.5$
+
+Flag $x_i$ as an outlier if $|z_i| > 3.5$
 
 Here, $\Phi^{-1}(3/4) = \Phi^{-1}(0.75) \approx 0.6745$ reflects the fact
-that 75% of values lie within ~0.6745 standard deviation and 3.5 represent a fixed
+that 75% of values lie within $\approx 0.6745$ standard deviation and 3.5 represent a fixed
 threshold value.
 
 > [!IMPORTANT]
@@ -280,6 +292,13 @@ This will build the container image and then launch it. By default the service w
 at `127.0.0.1:3000` but you can easily change this property by editing the associated environment
 variable(see section above).
 
+## Unit tests
+The `test/` directory includes unit tests for the statistics module. These tests are executed 
+during the container build process, but you can also run them manually by issuing the following command:
+
+```sh
+$ cabal test
+```
 
 ## License
 This software is released under the GPLv3 license. You can find a copy of the license with this repository or by visiting the [following page](https://choosealicense.com/licenses/gpl-3.0/).

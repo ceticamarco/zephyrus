@@ -366,7 +366,7 @@ getCityStatistics city db = do
                 anomalies = detectAnomalies stats
 
             -- Compute statistics
-            let res = StatResult
+            let statRes = StatResult
                     { Types.mean = roundValue 4 $ Statistics.mean temps
                     , Types.min = minimum temps
                     , Types.max = maximum temps
@@ -376,7 +376,7 @@ getCityStatistics city db = do
                     , Types.mode = Statistics.mode temps
                     , anomaly = parseAnomalies anomalies
                     }
-            pure $ Right res
+            pure $ Right statRes
     where
         parseAnomalies :: [(Day, Double)] -> Maybe [WeatherAnomaly]
         parseAnomalies anomalies =
