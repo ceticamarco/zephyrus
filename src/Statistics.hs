@@ -67,7 +67,9 @@ mode temps =
     -- Find the longest group(i.e. the most frequent value)
         longestGrp = maximumBy (compare `on` length) grp
     -- return just the first element
-    in head longestGrp
+    in case longestGrp of
+        (x:_) -> x
+        [] -> 0
 
 -- | Detects statistical anomalies using the Robust Z-Score algorithm
 --   

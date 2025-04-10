@@ -11,7 +11,7 @@ category:           Network
 build-type:         Simple
 
 common warnings
-    ghc-options: -Wall -Wextra -Werror -O2 -static -threaded
+    ghc-options: -Wall -Wextra -Werror -O2 -threaded
 
 library zephyrus-lib
     import:            warnings
