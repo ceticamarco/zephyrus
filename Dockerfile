@@ -3,6 +3,7 @@ LABEL author="Marco Cetica"
 
 # Set working directory
 WORKDIR /opt/zephyrus
+COPY . /opt/zephyrus
 
 # Update package list
 RUN cabal update
@@ -15,7 +16,6 @@ RUN cabal build --only-dependencies
 RUN cabal test
 
 # Build the rest of the application
-COPY . /opt/zephyrus
 RUN cabal install
 
 # Strip binary file
