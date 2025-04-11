@@ -1,7 +1,7 @@
 <div align="center">
 <h1>Zephyrus 🌲</h1>
     
-<h6><i>Web service for meteorological statistics</i></h6>
+<h6><i>Web service for weather statistics</i></h6>
 
 [![](https://github.com/ceticamarco/zephyrus/actions/workflows/docker.yml/badge.svg)](https://github.com/ceticamarco/zephyrus/actions/workflows/docker.yml)
 [![](https://github.com/ceticamarco/zephyrus/actions/workflows/linter.yml/badge.svg)](https://github.com/ceticamarco/zephyrus/actions/workflows/linter.yml)
@@ -14,7 +14,7 @@ Haskell using [Servant](https://www.servant.dev/) and [OpenWeatherMap](https://o
 
 I've built this service out of frustration with existing
 weather platforms cluttered with ads, paywalls, clickbait contents and unnecessary features.
-Zephyrus only gets you the essential information about the meteorological conditions of a given location without any additional nonsense. 
+Zephyrus only gets you the essential information about the weather conditions of a given location without any additional nonsense.
 
 This service communicates through a JSON API, making
 it suitable for use in any kind of project or device. I already use it on my phone,
@@ -38,7 +38,7 @@ will yield the following:
   "celsiusTemp": "21°C",
   "condEmoji": "☀️",
   "condition": "Clear",
-  "date": "2025-03-31",
+  "date": "Mon, 31/03/2025",
   "fahrenheitTemp": "+69°F"
 }
 ```
@@ -99,18 +99,18 @@ will yield
 {
   "forecast": [
     {
-      "celsiusTemp": "0°C",
+      "celsiusTemp": "-1°C",
       "condEmoji": "☃️",
       "condition": "Snow",
-      "date": "2025-04-09",
-      "fahrenheitTemp": "32°F"
+      "date": "Fri, 11/04/2025",
+      "fahrenheitTemp": "30°F"
     },
     {
-      "celsiusTemp": "-3°C",
-      "condEmoji": "☃️",
-      "condition": "Snow",
-      "date": "2025-04-10",
-      "fahrenheitTemp": "26°F"
+      "celsiusTemp": "-7°C",
+      "condEmoji": "☁️",
+      "condition": "Clouds",
+      "date": "Sat, 12/04/2025",
+      "fahrenheitTemp": "19°F"
     },
   ]
 }
@@ -128,9 +128,9 @@ will yield
 
 ```json
 {
-  "moonEmoji": "🌔",
-  "moonPhase": "Waxing Gibbous",
-  "moonProgress": "89%"
+  "icon": "🌔",
+  "percentage": "Waxing Gibbous",
+  "phase": "89%"
 }
 ```
 
@@ -150,7 +150,7 @@ previous days. This includes the arithmetical mean of the temperatures,
 the maximum and the minimum values, the median, the mode and the standard deviation.
 
 This endpoint becomes available only after the system has gathered sufficient
-_updated_ data; that if and only if there are **at least** two meteorological
+_updated_ data; that if and only if there are **at least** two weather
 records for a given location, and they are **within the previous 48 hours**. If these
 two conditions aren't met, Zephyrus will refuse to provide a statistical report.
 
@@ -240,7 +240,7 @@ threshold value.
 > The anomaly detection system works under the assumption that the weather
 > data is normally distributed(at least roughly), this might not always be the case
 > on datasets sampled over a short time window. For accurate result, collect at least
-> two weeks of meteorological data.
+> two weeks of weather data.
 
 The in-memory statistics database is updated each time the `/weather/:city` route
 is consumed and is reset at each restart. At the time being, there is no plan
@@ -248,8 +248,8 @@ to make data gathering non-volatile.
 
 ## Embedded Cache System
 In order to minimize the amount of calls made to the OpenWeatherMap servers, Zephyrus
-provides a built-in, in-memory cache data structure to store fetched meteorological data. 
-Each time a client requests any kind of meteorological data of a given location, Zephyrus
+provides a built-in, in-memory cache data structure to store fetched weather data.
+Each time a client requests any kind of weather data of a given location, Zephyrus
 tries to search it first on the cache system; if it is found, the cached value is returned
 otherwise a new API call is made and the retrieved values is added to the cache before
 being returned to the client. The expiration date, expressed in hours, is controlled via

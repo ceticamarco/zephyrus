@@ -1,7 +1,7 @@
 cabal-version:      3.0
 name:               zephyrus
-version:            0.1.0.1
-synopsis:           HTTP weather forecast service 
+version:            0.1.0.2
+synopsis:           HTTP service for weather statistics
 homepage:           https://github.com/ceticamarco/zephyrus
 license:            GPL-3.0-or-later
 license-file:       LICENSE

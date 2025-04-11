@@ -126,7 +126,7 @@ getMetrics city = do
                 let fmtMetrics = metrics { humidity = fmtHumidity (humidity metrics)
                                          , pressure = fmtPressure (pressure metrics) 
                                          , celsiusDewPoint = fmtTemperature (celsiusDewPoint metrics) True
-                                         , fahrenheitDewPoint = fmtTemperature (fahrenheitDewPoint metrics) False 
+                                         , fahrenheitDewPoint = fmtTemperature (fahrenheitDewPoint metrics) False
                                          -- UV index left unchanged
                                          , visibility = fmtVisibility (visibility metrics)
                                          }

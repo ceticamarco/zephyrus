@@ -109,7 +109,7 @@ getCityWeather city appid = runReq defaultHttpConfig $ do
             let celsiusVal = round (temp :: Double) :: Int
             let fahrenheitVal = (celsiusVal * 9 `div` 5) + 32
 
-            -- Format UNIX timestamp as '<DAY_OF_THE_WEEK> dd/MM'
+            -- Format UNIX timestamp as 'YYYY-MM-DD'
             let utcTime = posixSecondsToUTCTime (fromIntegral (unixTs :: Int))
             let weatherDate = utctDay utcTime
 

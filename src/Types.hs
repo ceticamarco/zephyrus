@@ -1,15 +1,17 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Types where
 
 import GHC.Generics (Generic)
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (FromJSON, ToJSON(..), (.=), object)
 import Data.Time.Clock (UTCTime)
+import Data.Time (formatTime, defaultTimeLocale)
 import Data.Time.Calendar(Day)
 import Control.Concurrent.STM.TVar (TVar)
 import Control.Monad.Trans.Reader (ReaderT)
 import Data.Map (Map)
-import Data.Text (Text)
+import Data.Text (Text, pack)
 import Servant ( Handler )
 
 -- The City data type, representing the name, the latitude and the longitude of a location
@@ -25,7 +27,14 @@ data Weather = Weather { date :: Day
                        , condition :: Text
                        , condEmoji :: Text
                        } deriving (Show, Eq, Generic)
-instance ToJSON Weather
+instance ToJSON Weather where
+    toJSON (Weather dt fTemp cTemp cond emoji) =
+        object [ "date" .= pack (formatTime defaultTimeLocale "%a, %d/%m/%Y" dt)
+               , "fahrenheitTemp" .= fTemp
+               , "celsiusTemp" .= cTemp
+               , "condition" .= cond
+               , "condEmoji" .= emoji
+               ]
 instance FromJSON Weather
 
 -- The metrics data type, representing the humidity, pressure and dew point
@@ -59,7 +68,12 @@ data Moon = Moon { moonEmoji :: Text
                  , moonPhase :: Text
                  , moonProgress :: Text
                  } deriving (Show, Eq, Generic)
-instance ToJSON Moon
+instance ToJSON Moon where
+    toJSON (Moon emoji phase progress) =
+        object [ "icon" .= emoji
+               , "phase" .= phase
+               , "percentage" .= progress
+               ]
 instance FromJSON Moon
 
 -- Sum type representing the possible values of the cache
