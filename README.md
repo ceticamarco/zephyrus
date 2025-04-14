@@ -167,12 +167,12 @@ will yield(not real data):
 {                                                                                 
   "anomaly": null,                      
   "count": 12,
-  "max": 30,
+  "maximum": 30,
   "mean": 13.9167,                       
   "median": 15.25,                       
-  "min": -15,
+  "minimum": -15,
   "mode": 16,
-  "stdDev": 9.6562
+  "standardDev": 9.6562
 }
 ```
 
@@ -189,19 +189,19 @@ the statistical report(again, the data is made up):
     {                                                                             
       "anomalyDate": "2025-04-06",                                                
       "anomalyTemp": 30                    
-    },                                                                            
+    },                
     {
       "anomalyDate": "2025-04-07",         
       "anomalyTemp": -15                   
     }                                    
   ],                                     
   "count": 12,
-  "max": 30,
+  "maximum": 30,
   "mean": 13.9167,                       
   "median": 15.25,                       
-  "min": -15,
+  "minimum": -15,
   "mode": 16,
-  "stdDev": 9.6562
+  "standardDev": 9.6562
 }  
 ```
 

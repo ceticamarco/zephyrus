@@ -23,7 +23,7 @@ insertStatistic tDb city weather = do
     case Map.lookup key statDB of
         Just _ -> return ()
         Nothing -> do
-            liftIO $ atomically $ modifyTVar' tDb (Map.insert city weather)
+            liftIO $ atomically $ modifyTVar' tDb (Map.insert key weather)
 
 -- | A key is invalid if it has less than 2 entries in the last 2 days
 isKeyInvalid :: StatDB -> Text -> IO Bool

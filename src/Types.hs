@@ -102,7 +102,17 @@ data StatResult = StatResult { min :: Double
                              , mode :: Double
                              , anomaly :: Maybe [WeatherAnomaly]
                              } deriving (Show, Eq, Generic)
-instance ToJSON StatResult
+instance ToJSON StatResult where
+    toJSON (StatResult mnm mxm cnt mn standDev med md an) =
+        object [ "minimum" .= mnm
+               , "maximum" .= mxm
+               , "count" .= cnt
+               , "mean" .= mn
+               , "standardDev" .= standDev
+               , "median" .= med
+               , "mode" .= md
+               , "anomaly" .= an
+               ]
 instance FromJSON StatResult
 
 -- The cache data type, representing a mapping between a city and its weather
