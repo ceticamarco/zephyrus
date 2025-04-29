@@ -17,7 +17,17 @@ import Network.HTTP.Req ((/:), (=:), req, https, runReq, defaultHttpConfig, json
 import qualified Network.HTTP.Req as Req
 import qualified Data.Map as Map
 
-import Types (Weather(..), Metrics(..), Wind(..), Forecast(..), Moon(..), City(..), StatResult(..), WeatherAnomaly(..), StatDB)
+import Types
+    ( StatResult(..),
+      WeatherAnomaly(WeatherAnomaly),
+      StatDB,
+      Moon(..),
+      Forecast(..),
+      ForecastElement(..),
+      Wind(..),
+      Metrics(..),
+      Weather(..),
+      City(..) )
 import Statistics (isKeyInvalid, mean, stdDev, median, mode, detectAnomalies)
 
 extractField :: Text -> [Value] -> Parser Text
@@ -47,6 +57,33 @@ getEmoji condition' isNight =
         "Clear"        -> if isNight then "🌙" else "☀️"
         "Clouds"       -> "☁️"
         _              -> "❓"
+
+getCardinalDir :: Double -> (Text, Text)
+getCardinalDir windDeg =
+    -- Each cardinal direction represents a segment of 22.5 degrees
+    let cardinalDirections =
+            [ ("N", "↓")   -- 0/360 DEG
+            , ("NNE", "↙") -- 22.5 DEG
+            , ("NE",  "↙") -- 45 DEG
+            , ("ENE", "↙") -- 67.5 DEG
+            , ("E",   "←") -- 90 DEG
+            , ("ESE", "↖") -- 112.5 DEG
+            , ("SE",  "↖") -- 135 DEG
+            , ("SSE", "↖") -- 157.5 DEG
+            , ("S",   "↑") -- 180 DEG
+            , ("SSW", "↗") -- 202.5 DEG
+            , ("SW",  "↗") -- 225 DEG
+            , ("WSW", "↗") -- 247.5 DEG
+            , ("W",   "→") -- 270 DEG
+            , ("WNW", "↘") -- 292.5 DEG
+            , ("NW",  "↘") -- 315 DEG
+            , ("NNW", "↘") -- 337.5 DEG
+            ]
+        -- Computes "idx ≡ round(wind_deg / 22.5) (mod 16)"
+        -- to ensure that values above 360 degrees or below 0 degrees
+        -- "stay" bounded to the map
+        idx = round (windDeg / 22.5) `mod` 16
+    in cardinalDirections !! idx
 
 getCityCoords :: Text -> Text -> IO (Either Text City)
 getCityCoords city appid = runReq defaultHttpConfig $ do
@@ -182,43 +219,18 @@ getCityWind city apiKey = runReq defaultHttpConfig $ do
             -- Extract keys from JSON response
             current <- root .: "current"
             windSpeed <- current .: "wind_speed" :: Parser Double
-            windDegree <- current .: "wind_deg"
+            windGust <- current .: "wind_gust" :: Parser Double
+            windDegree <- current .: "wind_deg" :: Parser Double
 
-            -- Get cardinal direction and direction icon
+            -- Get cardinal direction and direction arrow
             let (windDirection, windArrow) = getCardinalDir windDegree
 
             pure $ Wind { speed = (pack . show) windSpeed
+                        , gust = (pack . show) windGust
                         , direction = windDirection
                         , arrow = windArrow
                         }
             )
-            
-        getCardinalDir :: Double -> (Text, Text)
-        getCardinalDir windDeg =
-            -- Each cardinal direction represents a segment of 22.5 degrees
-            let cardinalDirections =
-                    [ ("N", "↓")   -- 0/360 DEG
-                    , ("NNE", "↙") -- 22.5 DEG
-                    , ("NE",  "↙") -- 45 DEG
-                    , ("ENE", "↙") -- 67.5 DEG
-                    , ("E",   "←") -- 90 DEG
-                    , ("ESE", "↖") -- 112.5 DEG
-                    , ("SE",  "↖") -- 135 DEG
-                    , ("SSE", "↖") -- 157.5 DEG
-                    , ("S",   "↑") -- 180 DEG
-                    , ("SSW", "↗") -- 202.5 DEG
-                    , ("SW",  "↗") -- 225 DEG
-                    , ("WSW", "↗") -- 247.5 DEG
-                    , ("W",   "→") -- 270 DEG
-                    , ("WNW", "↘") -- 292.5 DEG
-                    , ("NW",  "↘") -- 315 DEG
-                    , ("NNW", "↘") -- 337.5 DEG
-                    ]
-                -- Computes "idx ≡ round(wind_deg / 22.5) (mod 16)"
-                -- to ensure that values above 360 degrees or below 0 degrees
-                -- "stay" bounded to the map
-                idx = round (windDeg / 22.5) `mod` 16
-            in cardinalDirections !! idx
 
 getCityForecast :: City -> Text -> IO (Either Text Forecast)
 getCityForecast city apiKey = runReq defaultHttpConfig $ do
@@ -242,37 +254,51 @@ getCityForecast city apiKey = runReq defaultHttpConfig $ do
             -- Extract the daily array from the JSON object
             daily <- root .: "daily"
 
-            -- Parse each element of the array into a Weather object.
+            -- Parse each element of the array into a ForecastElement object.
             -- We drop the first element because it represent the current day
-            -- which is not so useful in the '/forecast' route.
-            fc <- withArray "daily" (mapM parseDailyWeather . take 5 . drop 1 . V.toList) daily
-
-            pure $ Forecast fc)
-
-        parseDailyWeather :: Value -> Parser Weather
-        parseDailyWeather = withObject "daily element" $ \obj -> do
-            -- Extract temperature and weather condition
-            temp <- obj .: "temp" >>= (.: "day") :: Parser Double
+            -- which is not so useful in this context
+            fc <- withArray "daily" (mapM getFCFields . take 5 . drop 1 . V.toList) daily
+            
+            pure $ Forecast { forecast = fc })
+        getFCFields :: Value ->  Parser ForecastElement
+        getFCFields = withObject "daily element" $ \obj -> do
+            -- Extract temperature
+            tempMin <- obj .: "temp" >>= (.: "min") :: Parser Double
+            tempMax <- obj .: "temp" >>= (.: "max") :: Parser Double
             weatherArray <- obj .: "weather"
-            unixTs <- obj .: "dt"
+            -- Get forecast date(UNIX timestamp)
+            unixTS <- obj .: "dt"
+            -- Get conditions and icon
             conditionVal <- withArray "weather" (extractField "main" . V.toList) weatherArray
             icon <- withArray "weather" (extractField "icon" . V.toList) weatherArray
-            fl <- obj .: "feels_like" >>= (.: "day")
+            fl <- obj .: "feels_like" >>= (.: "day") :: Parser Double
+            -- Get wind speed, gust and direction
+            windSpeed <- obj .: "wind_speed" :: Parser Double
+            windDegree <- obj .: "wind_deg" :: Parser Double
+            windGust <- obj .: "wind_gust" :: Parser Double
 
             -- Format UNIX timestamp as UTC time
-            let utcTime = posixSecondsToUTCTime (fromIntegral (unixTs :: Int))
+            let utcTime = posixSecondsToUTCTime (fromIntegral (unixTS :: Int))
             let weatherDate = utctDay utcTime
 
             -- Get emoji from weather condition
             let isNight = "n" `isSuffixOf` icon
             let emojiVal = getEmoji conditionVal isNight
 
-            pure $ Weather
-                { date = weatherDate
-                , temperature = (pack . show) temp
-                , feelsLike = (pack . show) (fl :: Double)
-                , condition = conditionVal
-                , condEmoji = emojiVal 
+            -- Get cardinal direction and direction arrow
+            let (windDirection, windArrow) = getCardinalDir windDegree
+
+            pure $ ForecastElement
+                { fcDate = weatherDate
+                , fcMin = (pack . show) tempMin
+                , fcMax = (pack . show) tempMax
+                , fcCond = conditionVal
+                , fcEmoji = emojiVal
+                , fcFL = (pack . show) fl
+                , fcWindSpeed = (pack . show) windSpeed
+                , fcWindGust = (pack . show) windGust
+                , fcWindDir = windDirection
+                , fcWindArrow = windArrow
                 }
 
 getMoon :: Text -> IO (Either Text Moon)

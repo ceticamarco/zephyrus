@@ -35,11 +35,28 @@ will yield the following:
 
 ```json
 {
-  "celsiusTemp": "21°C",
   "condEmoji": "☀️",
   "condition": "Clear",
-  "date": "Mon, 31/03/2025",
-  "fahrenheitTemp": "+69°F"
+  "date": "Tue, 29/04/2025",
+  "feelsLike": "24.6°C",
+  "temperature": "24.6°C"
+}
+```
+To get results in imperial units instead of metric, append the `i`(for _imperial_) query parameter to the URL. For example
+
+```sh
+$ curl -s 'http://127.0.0.1:3000/weather/milan?jq' | jq
+```
+
+which will yield:
+
+```json
+{
+  "condEmoji": "☀️",
+  "condition": "Clear",
+  "date": "Tue, 29/04/2025",
+  "feelsLike": "76.2°F",
+  "temperature": "76.4°F"
 }
 ```
 
@@ -57,14 +74,16 @@ will yield:
 
 ```json
 {
-  "celsiusDewPoint": "13°C",
-  "fahrenheitDewPoint": "55°F",
-  "humidity": "94%",
-  "pressure": "1020 hPa",
+  "dewPoint": "14.9°C",
+  "humidity": "66%",
+  "pressure": "1015 hPa",
   "uvIndex": 0,
-  "visibility": "5km"
+  "visibility": "10km"
 }
 ```
+
+As in the previous case, you can append the `i` query parameter to get results
+in imperial units.
 
 ### Wind
 The `/wind/:city` route allows you to retrieve wind related data(such as speed and the direction)
@@ -79,15 +98,18 @@ will yield
 ```json
 {
   "arrow": "↙",
-  "direction": "NNE",
-  "imperialSpeed": "13.80 mph",
-  "metricSpeed": "22.21 km/h"
+  "direction": "ENE",
+  "gust": "19.3 km/h",
+  "speed": "11.3 km/h"
 }
 ```
 
+As in the previous case, you can append the `i` query parameter to get results
+in imperial units.
+
 ### Forecast
-The `/forecast/:city` route allows you to request the weather forecast
-of the next five days(that is, an array containing five weather objects). For example,
+The `/forecast/:city` route allows you to get the weather forecast
+of the next five days(excluding the current one). For example,
 
 ```sh
 $  curl -s 'http://127.0.0.1:3000/forecast/Yakutsk' | jq
@@ -99,22 +121,35 @@ will yield
 {
   "forecast": [
     {
-      "celsiusTemp": "-1°C",
-      "condEmoji": "☃️",
-      "condition": "Snow",
-      "date": "Fri, 11/04/2025",
-      "fahrenheitTemp": "30°F"
+      "condEmoji": "🌧 ",
+      "condition": "Rain",
+      "date": "2025-05-03",
+      "feelsLike": "0.9°C",
+      "temperatureMax": "5.6°C",
+      "temperatureMin": "-2.4°C",
+      "windArrow": "↗",
+      "windDirection": "SSW",
+      "windGust": "25.1 km/h",
+      "windSpeed": "14.7 km/h"
     },
     {
-      "celsiusTemp": "-7°C",
-      "condEmoji": "☁️",
-      "condition": "Clouds",
-      "date": "Sat, 12/04/2025",
-      "fahrenheitTemp": "19°F"
-    },
+      "condEmoji": "☃️",
+      "condition": "Snow",
+      "date": "2025-05-04",
+      "feelsLike": "7.2°C",
+      "temperatureMax": "9.4°C",
+      "temperatureMin": "2.1°C",
+      "windArrow": "↘",
+      "windDirection": "NNW",
+      "windGust": "33.7 km/h",
+      "windSpeed": "13.9 km/h"
+    }
   ]
 }
 ```
+
+As in the previous case, you can append the `i` query parameter to get results
+in imperial units.
 
 ### Moon
 The `/moon` route provides the current moon phase along with an icon representing it.

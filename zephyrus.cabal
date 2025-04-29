@@ -49,7 +49,7 @@ executable zephyrus
 test-suite zephyrus-test
     type:             exitcode-stdio-1.0
     main-is:          Tests.hs
-    other-modules:    StatsTests
+    other-modules:    StatsTests ModelTests
     hs-source-dirs:   test
     build-depends:     base >= 4.7 && <5
                       , zephyrus-lib

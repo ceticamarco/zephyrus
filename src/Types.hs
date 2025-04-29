@@ -15,18 +15,20 @@ import Data.Text (Text, pack)
 import Servant ( Handler )
 
 -- The City data type, representing the name, the latitude and the longitude of a location
-data City = City { name :: Text
-                 , lat :: Double
-                 , lon :: Double
-                 } deriving (Show, Eq, Generic)
+data City = City 
+    { name :: Text
+    , lat :: Double
+    , lon :: Double
+    } deriving (Show, Eq, Generic)
 
 -- The weather data type, representing the weather
-data Weather = Weather { date :: Day
-                       , temperature :: Text
-                       , condition :: Text
-                       , feelsLike :: Text
-                       , condEmoji :: Text
-                       } deriving (Show, Eq, Generic)
+data Weather = Weather 
+    { date :: Day
+    , temperature :: Text
+    , condition :: Text
+    , feelsLike :: Text
+    , condEmoji :: Text
+    } deriving (Show, Eq, Generic)
 instance ToJSON Weather where
     toJSON (Weather dt temp cond fl emoji) =
         object [ "date" .= pack (formatTime defaultTimeLocale "%a, %d/%m/%Y" dt)
@@ -38,34 +40,65 @@ instance ToJSON Weather where
 instance FromJSON Weather
 
 -- The metrics data type, representing the humidity, pressure and dew point
-data Metrics = Metrics { humidity :: Text
-                       , pressure :: Text
-                       , dewPoint :: Text
-                       , uvIndex :: Int
-                       , visibility :: Text
-                       } deriving (Show, Eq, Generic)
+data Metrics = Metrics 
+    { humidity :: Text
+    , pressure :: Text
+    , dewPoint :: Text
+    , uvIndex :: Int
+    , visibility :: Text
+    } deriving (Show, Eq, Generic)
 instance ToJSON Metrics
 instance FromJSON Metrics
 
 -- The wind data type, representing the wind speed, the wind direction and the direction icon
-data Wind = Wind { speed :: Text
-                 , direction :: Text
-                 , arrow :: Text
-                 } deriving (Show, Eq, Generic)
+data Wind = Wind 
+    { speed :: Text
+    , gust :: Text
+    , direction :: Text
+    , arrow :: Text
+    } deriving (Show, Eq, Generic)
 instance ToJSON Wind
 instance FromJSON Wind
 
--- The forecast data type, representing the weather forecast of the next 5 days
-newtype Forecast = Forecast { forecast :: [Weather] }
-              deriving (Show, Eq, Generic)
+-- The forecast data type of the next 5 days
+data ForecastElement = ForecastElement
+    { fcDate :: Day
+    , fcMin :: Text
+    , fcMax :: Text
+    , fcCond :: Text
+    , fcEmoji :: Text
+    , fcFL :: Text
+    , fcWindSpeed :: Text
+    , fcWindGust :: Text
+    , fcWindDir :: Text
+    , fcWindArrow :: Text
+    } deriving (Show, Eq, Generic)
+instance ToJSON ForecastElement where
+    toJSON (ForecastElement dt tempMin tempMax cond emoji fl wSpeed wGust wDir wArr) =
+        object [ "date" .= dt
+               , "temperatureMin" .= tempMin
+               , "temperatureMax" .= tempMax
+               , "condition" .= cond
+               , "condEmoji" .= emoji
+               , "feelsLike" .= fl
+               , "windSpeed" .= wSpeed
+               , "windGust" .= wGust
+               , "windDirection" .= wDir
+               , "windArrow" .= wArr
+               ]
+instance FromJSON ForecastElement
+
+newtype Forecast = Forecast { forecast :: [ForecastElement] }
+    deriving (Show, Eq, Generic)
 instance ToJSON Forecast
 instance FromJSON Forecast
 
 -- The moon data type, representing the moon phase
-data Moon = Moon { moonEmoji :: Text
-                 , moonPhase :: Text
-                 , moonProgress :: Text
-                 } deriving (Show, Eq, Generic)
+data Moon = Moon 
+    { moonEmoji :: Text
+    , moonPhase :: Text
+    , moonProgress :: Text
+    } deriving (Show, Eq, Generic)
 instance ToJSON Moon where
     toJSON (Moon emoji phase progress) =
         object [ "icon" .= emoji
@@ -85,21 +118,23 @@ data CacheElement = WeatherCache Weather
 -- The statistical database, representing a mapping between "$city" and its weather
 type StatDB = Map Text Weather
 
-data WeatherAnomaly = WeatherAnomaly { anomalyDate :: Day
-                                     , anomalyTemp :: Double
-                                     } deriving (Show, Eq, Generic)
+data WeatherAnomaly = WeatherAnomaly
+    { anomalyDate :: Day
+    , anomalyTemp :: Double
+    } deriving (Show, Eq, Generic)
 instance ToJSON WeatherAnomaly
 instance FromJSON WeatherAnomaly
 
-data StatResult = StatResult { min :: Double
-                             , max :: Double
-                             , count :: Int
-                             , mean :: Double
-                             , stdDev :: Double
-                             , median :: Double
-                             , mode :: Double
-                             , anomaly :: Maybe [WeatherAnomaly]
-                             } deriving (Show, Eq, Generic)
+data StatResult = StatResult
+    { min :: Double
+    , max :: Double
+    , count :: Int
+    , mean :: Double
+    , stdDev :: Double
+    , median :: Double
+    , mode :: Double
+    , anomaly :: Maybe [WeatherAnomaly]
+    } deriving (Show, Eq, Generic)
 instance ToJSON StatResult where
     toJSON (StatResult mnm mxm cnt mn standDev med md an) =
         object [ "minimum" .= mnm
@@ -117,9 +152,10 @@ instance FromJSON StatResult
 type ZCache = Map Text (CacheElement, UTCTime)
 
 -- The state of the weather cache between multiple requests
-data State = State { zCache :: TVar ZCache
-                   , statDB :: TVar StatDB
-                   }
+data State = State
+    { zCache :: TVar ZCache
+    , statDB :: TVar StatDB
+    }
 
 -- The Reader monad for the state
 type AppM = ReaderT State Handler

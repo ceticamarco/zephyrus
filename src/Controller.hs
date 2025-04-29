@@ -16,9 +16,30 @@ import Data.Maybe (fromMaybe)
 import Servant (throwError)
 import Text.Read (readMaybe)
 
-import Model (getCityCoords, getCityWeather, getCityMetrics, getCityWind, getCityForecast, getMoon, getCityStatistics)
+import Model
+    ( getCityCoords,
+      getCityWeather,
+      getCityMetrics,
+      getCityWind,
+      getCityForecast,
+      getMoon,
+      getCityStatistics )
 import Statistics (insertStatistic)
-import Types (AppM, State(..), Weather(..), ZCache, StatDB, CacheElement(..), Metrics(..), Wind(..), Forecast(..), Moon(..), StatResult(..), City)
+import Types
+    ( AppM,
+      State(State, statDB, zCache),
+      ZCache,
+      StatResult,
+      StatDB,
+      CacheElement(MoonCache, WeatherCache, MetricsCache, WindCache,
+                   ForecastCache),
+      Moon,
+      Forecast(forecast),
+      ForecastElement(fcWindGust, fcMin, fcMax, fcFL, fcWindSpeed),
+      Wind(gust, speed),
+      Metrics(visibility, humidity, pressure, dewPoint),
+      Weather(feelsLike, temperature),
+      City )
 import Error (jsonError)
 
 isCacheExpired :: UTCTime -> Int -> UTCTime -> Bool
@@ -182,7 +203,8 @@ getWind city isImperial = do
         Just (WindCache wind, timestamp)
             | not (isCacheExpired currentTime timeToLive timestamp) -> do
                 -- format wind
-                let fmtWind = wind { speed = fmtWindSpeed (speed wind) isImperial }
+                let fmtWind = wind { speed = fmtWindSpeed (speed wind) isImperial
+                                   , gust = fmtWindSpeed (gust wind) isImperial }
                 pure fmtWind
         _ -> fetchWind city tCache
     where
@@ -208,7 +230,8 @@ getWind city isImperial = do
                     (WindCache wind, currTime))
 
             -- format wind
-            let fmtWind = wind { speed = fmtWindSpeed (speed wind) isImperial }
+            let fmtWind = wind { speed = fmtWindSpeed (speed wind) isImperial
+                               , gust = fmtWindSpeed (gust wind) isImperial }
             pure fmtWind
 
 getForecast :: Text -> Bool -> AppM Forecast
@@ -226,10 +249,12 @@ getForecast city isImperial = do
         Just (ForecastCache fc, timestamp)
             | not (isCacheExpired currentTime timeToLive timestamp) -> do
                 -- Format forecast
-                let fmtForecast = fc { forecast = map (\weather -> 
-                    weather { temperature = fmtTemperature (temperature weather) isImperial
-                            , feelsLike = fmtTemperature (feelsLike weather) isImperial}
-                            ) (forecast fc) }
+                let fmtForecast = fc { forecast = map (\fcElement ->
+                        (fcElement { fcMin = fmtTemperature (fcMin fcElement) isImperial
+                                   , fcMax = fmtTemperature (fcMax fcElement) isImperial
+                                   , fcFL = fmtTemperature (fcFL fcElement) isImperial
+                                   , fcWindSpeed = fmtWindSpeed (fcWindSpeed fcElement) isImperial
+                                   , fcWindGust = fmtWindSpeed (fcWindGust fcElement) isImperial})) (forecast fc) }
                 pure fmtForecast
         _ -> fetchForecast city tCache
     where
@@ -255,11 +280,12 @@ getForecast city isImperial = do
                     (ForecastCache fc, currTime))
 
             -- Format forecast
-            let fmtForecast = fc { forecast = map (\weather ->
-                    weather { temperature = fmtTemperature (temperature weather) isImperial 
-                            , feelsLike = fmtTemperature (feelsLike weather) isImperial}
-                            ) (forecast fc) }
-
+            let fmtForecast = fc { forecast = map (\fcElement ->
+                    (fcElement { fcMin = fmtTemperature (fcMin fcElement) isImperial
+                               , fcMax = fmtTemperature (fcMax fcElement) isImperial
+                               , fcFL = fmtTemperature (fcFL fcElement) isImperial
+                               , fcWindSpeed = fmtWindSpeed (fcWindSpeed fcElement) isImperial
+                               , fcWindGust = fmtWindSpeed (fcWindGust fcElement) isImperial})) (forecast fc) }
             pure fmtForecast
             
 getMoonPhase :: AppM Moon
