@@ -95,7 +95,7 @@ robustZScore temps =
 detectAnomalies :: [Weather] -> [(Day, Double)]
 detectAnomalies weatherList =
     let -- Map each weather record to a (Date, Temp) pair
-        tempsWithDates = map (\(Weather dt _ temp _ _) -> (dt, read (unpack temp) :: Double)) weatherList
+        tempsWithDates = map (\(Weather dt temp _ _ _) -> (dt, read (unpack temp) :: Double)) weatherList
         
         -- Apply the Robust/MAD Z-Score anomaly detection algorithm
         anomalies = robustZScore (map snd tempsWithDates)

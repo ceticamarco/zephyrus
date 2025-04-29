@@ -22,17 +22,17 @@ data City = City { name :: Text
 
 -- The weather data type, representing the weather
 data Weather = Weather { date :: Day
-                       , fahrenheitTemp :: Text
-                       , celsiusTemp :: Text
+                       , temperature :: Text
                        , condition :: Text
+                       , feelsLike :: Text
                        , condEmoji :: Text
                        } deriving (Show, Eq, Generic)
 instance ToJSON Weather where
-    toJSON (Weather dt fTemp cTemp cond emoji) =
+    toJSON (Weather dt temp cond fl emoji) =
         object [ "date" .= pack (formatTime defaultTimeLocale "%a, %d/%m/%Y" dt)
-               , "fahrenheitTemp" .= fTemp
-               , "celsiusTemp" .= cTemp
+               , "temperature" .= temp
                , "condition" .= cond
+               , "feelsLike" .= fl
                , "condEmoji" .= emoji
                ]
 instance FromJSON Weather
@@ -40,8 +40,7 @@ instance FromJSON Weather
 -- The metrics data type, representing the humidity, pressure and dew point
 data Metrics = Metrics { humidity :: Text
                        , pressure :: Text
-                       , celsiusDewPoint :: Text
-                       , fahrenheitDewPoint :: Text
+                       , dewPoint :: Text
                        , uvIndex :: Int
                        , visibility :: Text
                        } deriving (Show, Eq, Generic)
@@ -49,8 +48,7 @@ instance ToJSON Metrics
 instance FromJSON Metrics
 
 -- The wind data type, representing the wind speed, the wind direction and the direction icon
-data Wind = Wind { metricSpeed :: Text
-                 , imperialSpeed :: Text
+data Wind = Wind { speed :: Text
                  , direction :: Text
                  , arrow :: Text
                  } deriving (Show, Eq, Generic)

@@ -34,16 +34,21 @@ handleResult (Left err) = throwError $ jsonError 500 err
 handleResult (Right result) = pure result
 
 fmtTemperature :: Text -> Bool -> Text
-fmtTemperature temp isCelsius =
-    if isCelsius
-        then pack (unpack temp) <> "°C"
-        else pack (unpack temp) <> "°F"
+fmtTemperature temp isImperial =
+    let parsedTemp = read (unpack temp) :: Double
+    in if isImperial
+        then pack (printf "%.1f" ((parsedTemp * 9 / 5) + 32)) <> "°F"
+        else pack (printf "%.1f" parsedTemp) <> "°C"
 
 fmtWindSpeed :: Text -> Bool -> Text
-fmtWindSpeed speed isMetric =
-    if isMetric
-        then pack (unpack speed) <> " km/h"
-        else pack (unpack speed) <> " mph"
+fmtWindSpeed windSpeed isImperial =
+    -- Convert wind speed to mph or km/s from m/s
+    -- 1 m/s = 2.23694 mph
+    -- 1 m/s = 3.6 km/h
+    let parsedSpeed = read (unpack windSpeed) :: Double
+    in if isImperial
+        then pack (printf "%.1f" (parsedSpeed * 2.23694)) <> " mph"
+        else pack (printf "%.1f" (parsedSpeed * 3.6)) <> " km/h"
 
 fmtHumidity :: Text -> Text
 fmtHumidity val = pack $ printf "%s%%" val
@@ -54,8 +59,8 @@ fmtPressure val = pack $ printf "%s hPa" val
 fmtVisibility :: Text -> Text
 fmtVisibility val = pack $ printf "%skm" val
 
-getWeather :: Text -> AppM Weather
-getWeather city = do
+getWeather :: Text -> Bool -> AppM Weather
+getWeather city isImperial = do
     -- Read from cache
     State{zCache = tCache} <- ask
     State{statDB = tDB} <- ask
@@ -71,8 +76,8 @@ getWeather city = do
         Just (WeatherCache weather, timestamp)
             | not (isCacheExpired currentTime timeToLive timestamp) -> do
                 -- Format temperature
-                let fmtWeather = weather { fahrenheitTemp = fmtTemperature (fahrenheitTemp weather) False
-                                         , celsiusTemp = fmtTemperature (celsiusTemp weather) True
+                let fmtWeather = weather { temperature = fmtTemperature (temperature weather) isImperial
+                                         , feelsLike = fmtTemperature (feelsLike weather) isImperial
                                          }
                 pure fmtWeather
         _ -> fetchWeather city tCache tDB
@@ -102,14 +107,14 @@ getWeather city = do
             insertStatistic db city' weather
 
             -- Format temperature
-            let fmtWeather = weather { fahrenheitTemp = fmtTemperature (fahrenheitTemp weather) False
-                                     , celsiusTemp = fmtTemperature (celsiusTemp weather) True
+            let fmtWeather = weather { temperature = fmtTemperature (temperature weather) isImperial
+                                     , feelsLike = fmtTemperature (feelsLike weather) isImperial 
                                      }
             -- Return the weather
             pure fmtWeather
 
-getMetrics :: Text -> AppM Metrics
-getMetrics city = do
+getMetrics :: Text -> Bool -> AppM Metrics
+getMetrics city isImperial = do
     -- Read from cache
     State{zCache = tCache} <- ask
     metricsCache <- liftIO $ readTVarIO tCache
@@ -125,8 +130,7 @@ getMetrics city = do
                 -- Format metrics
                 let fmtMetrics = metrics { humidity = fmtHumidity (humidity metrics)
                                          , pressure = fmtPressure (pressure metrics) 
-                                         , celsiusDewPoint = fmtTemperature (celsiusDewPoint metrics) True
-                                         , fahrenheitDewPoint = fmtTemperature (fahrenheitDewPoint metrics) False
+                                         , dewPoint = fmtTemperature (dewPoint metrics) isImperial
                                          -- UV index left unchanged
                                          , visibility = fmtVisibility (visibility metrics)
                                          }
@@ -157,15 +161,14 @@ getMetrics city = do
             -- Format metrics
             let fmtMetrics = metrics { humidity = fmtHumidity (humidity metrics)
                                      , pressure = fmtPressure (pressure metrics) 
-                                     , celsiusDewPoint = fmtTemperature (celsiusDewPoint metrics) True
-                                     , fahrenheitDewPoint = fmtTemperature (fahrenheitDewPoint metrics) False 
+                                     , dewPoint = fmtTemperature (dewPoint metrics) isImperial
                                      -- UV index left unchanged
                                      , visibility = fmtVisibility (visibility metrics)
                                      }
             pure fmtMetrics
 
-getWind :: Text -> AppM Wind
-getWind city = do
+getWind :: Text -> Bool -> AppM Wind
+getWind city isImperial = do
     -- Read from cache
     State{zCache = tCache} <- ask
     windCache <- liftIO $ readTVarIO tCache
@@ -179,9 +182,7 @@ getWind city = do
         Just (WindCache wind, timestamp)
             | not (isCacheExpired currentTime timeToLive timestamp) -> do
                 -- format wind
-                let fmtWind = wind { metricSpeed = fmtWindSpeed (metricSpeed wind) True
-                                   , imperialSpeed = fmtWindSpeed (imperialSpeed wind) False
-                                   }
+                let fmtWind = wind { speed = fmtWindSpeed (speed wind) isImperial }
                 pure fmtWind
         _ -> fetchWind city tCache
     where
@@ -207,13 +208,11 @@ getWind city = do
                     (WindCache wind, currTime))
 
             -- format wind
-            let fmtWind = wind { metricSpeed = fmtWindSpeed (metricSpeed wind) True
-                               , imperialSpeed = fmtWindSpeed (imperialSpeed wind) False
-                               }
+            let fmtWind = wind { speed = fmtWindSpeed (speed wind) isImperial }
             pure fmtWind
 
-getForecast :: Text -> AppM Forecast
-getForecast city = do
+getForecast :: Text -> Bool -> AppM Forecast
+getForecast city isImperial = do
     -- Read from cache
     State{zCache = tCache} <- ask
     forecastCache <- liftIO $ readTVarIO tCache
@@ -228,8 +227,8 @@ getForecast city = do
             | not (isCacheExpired currentTime timeToLive timestamp) -> do
                 -- Format forecast
                 let fmtForecast = fc { forecast = map (\weather -> 
-                    weather { fahrenheitTemp = fmtTemperature (fahrenheitTemp weather) False
-                            , celsiusTemp = fmtTemperature (celsiusTemp weather) True}
+                    weather { temperature = fmtTemperature (temperature weather) isImperial
+                            , feelsLike = fmtTemperature (feelsLike weather) isImperial}
                             ) (forecast fc) }
                 pure fmtForecast
         _ -> fetchForecast city tCache
@@ -257,8 +256,8 @@ getForecast city = do
 
             -- Format forecast
             let fmtForecast = fc { forecast = map (\weather ->
-                    weather { fahrenheitTemp = fmtTemperature (fahrenheitTemp weather) False
-                            , celsiusTemp = fmtTemperature (celsiusTemp weather) True}
+                    weather { temperature = fmtTemperature (temperature weather) isImperial 
+                            , feelsLike = fmtTemperature (feelsLike weather) isImperial}
                             ) (forecast fc) }
 
             pure fmtForecast

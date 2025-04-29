@@ -1,7 +1,7 @@
 <div align="center">
 <h1>Zephyrus 🌲</h1>
     
-<h6><i>Web service for weather statistics</i></h6>
+<h6><i>real-time weather forecast service</i></h6>
 
 [![](https://github.com/ceticamarco/zephyrus/actions/workflows/docker.yml/badge.svg)](https://github.com/ceticamarco/zephyrus/actions/workflows/docker.yml)
 [![](https://github.com/ceticamarco/zephyrus/actions/workflows/linter.yml/badge.svg)](https://github.com/ceticamarco/zephyrus/actions/workflows/linter.yml)

@@ -101,13 +101,10 @@ getCityWeather city appid = runReq defaultHttpConfig $ do
             current <- root .: "current"
             weatherArray <- current .: "weather"
             conditionVal <- withArray "weather" (extractField "main" . V.toList) weatherArray
-            temp <- current .: "temp"
+            temp <- current .: "temp" :: Parser Double
             unixTs <- current .: "dt"
             icon <- withArray "weather" (extractField "icon" . V.toList) weatherArray
-
-            -- Compute temperature in Celsius and Fahrenheit
-            let celsiusVal = round (temp :: Double) :: Int
-            let fahrenheitVal = (celsiusVal * 9 `div` 5) + 32
+            feelsLikeTemp <- current .: "feels_like" :: Parser Double
 
             -- Format UNIX timestamp as 'YYYY-MM-DD'
             let utcTime = posixSecondsToUTCTime (fromIntegral (unixTs :: Int))
@@ -119,8 +116,8 @@ getCityWeather city appid = runReq defaultHttpConfig $ do
 
             pure $ Weather
                 { date = weatherDate
-                , fahrenheitTemp = (pack . show) fahrenheitVal
-                , celsiusTemp = (pack . show) celsiusVal
+                , temperature = (pack . show) temp
+                , feelsLike = (pack . show) feelsLikeTemp
                 , condition = conditionVal
                 , condEmoji = emojiVal 
                 })
@@ -148,21 +145,16 @@ getCityMetrics city appid = runReq defaultHttpConfig $ do
             current <- root .: "current"
             pressure' <- current .: "pressure"
             humidity' <- current .: "humidity"
-            dewPoint <- current .: "dew_point"
+            dewPointVal <- current .: "dew_point" :: Parser Double
             uvi <- current .: "uvi"
             vs <- current .: "visibility"
-
-            -- Compute dew point in Celsius and Fahrenheit
-            let celsiusDewPoint' = round (dewPoint :: Double) :: Int
-            let fahrenheitDewPoint' = (celsiusDewPoint' * 9 `div` 5) + 32
 
             -- Round UV index
             let uv = round (uvi :: Double) :: Int
 
             pure $ Metrics { humidity = (pack . show) (humidity' :: Int)
                            , pressure = (pack . show) (pressure' :: Int)
-                           , celsiusDewPoint = (pack . show) celsiusDewPoint'
-                           , fahrenheitDewPoint = (pack . show) fahrenheitDewPoint'
+                           , dewPoint = (pack . show) dewPointVal
                            , uvIndex = uv
                            , visibility = (pack . show) (round (vs / 1000 :: Double) :: Int)
                            }
@@ -189,20 +181,13 @@ getCityWind city apiKey = runReq defaultHttpConfig $ do
         parseWind = parseEither (withObject "root" $ \root -> do
             -- Extract keys from JSON response
             current <- root .: "current"
-            windSpeed <- current .: "wind_speed"
+            windSpeed <- current .: "wind_speed" :: Parser Double
             windDegree <- current .: "wind_deg"
 
             -- Get cardinal direction and direction icon
             let (windDirection, windArrow) = getCardinalDir windDegree
-            
-            -- Represent wind speed to km/s and MPH from m/s
-            -- 1 m/s = 2.23694 mph
-            -- 1 m/s = 3.6 km/h
-            let wind_kmh = roundValue 2 $ windSpeed * 3.6 :: Double
-            let wind_mph = roundValue 2 $ windSpeed * 2.23694 :: Double
 
-            pure $ Wind { metricSpeed = (pack . show) wind_kmh
-                        , imperialSpeed = (pack . show) wind_mph
+            pure $ Wind { speed = (pack . show) windSpeed
                         , direction = windDirection
                         , arrow = windArrow
                         }
@@ -257,25 +242,24 @@ getCityForecast city apiKey = runReq defaultHttpConfig $ do
             -- Extract the daily array from the JSON object
             daily <- root .: "daily"
 
-            -- Parse each element of the array into a Weather object
-            fc <- withArray "daily" (mapM parseDailyWeather . take 5 . V.toList) daily
+            -- Parse each element of the array into a Weather object.
+            -- We drop the first element because it represent the current day
+            -- which is not so useful in the '/forecast' route.
+            fc <- withArray "daily" (mapM parseDailyWeather . take 5 . drop 1 . V.toList) daily
 
             pure $ Forecast fc)
 
         parseDailyWeather :: Value -> Parser Weather
         parseDailyWeather = withObject "daily element" $ \obj -> do
             -- Extract temperature and weather condition
-            temp <- obj .: "temp" >>= (.: "day")
+            temp <- obj .: "temp" >>= (.: "day") :: Parser Double
             weatherArray <- obj .: "weather"
             unixTs <- obj .: "dt"
             conditionVal <- withArray "weather" (extractField "main" . V.toList) weatherArray
             icon <- withArray "weather" (extractField "icon" . V.toList) weatherArray
-            
-            -- Compute temperature in Celsius and Fahrenheit
-            let celsiusVal = round (temp :: Double) :: Int
-            let fahrenheitVal = (celsiusVal * 9 `div` 5) + 32
+            fl <- obj .: "feels_like" >>= (.: "day")
 
-            -- Format UNIX timestamp as '<DAY_OF_THE_WEEK> dd/MM'
+            -- Format UNIX timestamp as UTC time
             let utcTime = posixSecondsToUTCTime (fromIntegral (unixTs :: Int))
             let weatherDate = utctDay utcTime
 
@@ -285,8 +269,8 @@ getCityForecast city apiKey = runReq defaultHttpConfig $ do
 
             pure $ Weather
                 { date = weatherDate
-                , fahrenheitTemp = (pack . show) fahrenheitVal
-                , celsiusTemp = (pack . show) celsiusVal
+                , temperature = (pack . show) temp
+                , feelsLike = (pack . show) (fl :: Double)
                 , condition = conditionVal
                 , condEmoji = emojiVal 
                 }
@@ -362,7 +346,7 @@ getCityStatistics city db = do
         else do
             -- Extract records from the database
             let stats = map snd $ filter (\(key, _) -> city `isSuffixOf` key) (Map.toList db)
-                temps = mapMaybe (readMaybe . unpack . celsiusTemp) stats :: [Double]
+                temps = mapMaybe (readMaybe . unpack . temperature) stats :: [Double]
                 anomalies = detectAnomalies stats
 
             -- Compute statistics
