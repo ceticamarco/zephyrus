@@ -35,8 +35,8 @@ import Types
                    ForecastCache),
       Moon,
       Forecast(forecast),
-      ForecastElement(fcWindGust, fcMin, fcMax, fcFL, fcWindSpeed),
-      Wind(gust, speed),
+      ForecastElement(fcMin, fcMax, fcFL, fcWindSpeed),
+      Wind(speed),
       Metrics(visibility, humidity, pressure, dewPoint),
       Weather(feelsLike, temperature),
       City )
@@ -58,8 +58,8 @@ fmtTemperature :: Text -> Bool -> Text
 fmtTemperature temp isImperial =
     let parsedTemp = read (unpack temp) :: Double
     in if isImperial
-        then pack (printf "%.1f" ((parsedTemp * 9 / 5) + 32)) <> "°F"
-        else pack (printf "%.1f" parsedTemp) <> "°C"
+        then pack (printf "%d" (((round parsedTemp :: Int) * 9 `div` 5) + 32)) <> "°F"
+        else pack (printf "%d" (round parsedTemp :: Int)) <> "°C"
 
 fmtWindSpeed :: Text -> Bool -> Text
 fmtWindSpeed windSpeed isImperial =
@@ -203,8 +203,7 @@ getWind city isImperial = do
         Just (WindCache wind, timestamp)
             | not (isCacheExpired currentTime timeToLive timestamp) -> do
                 -- format wind
-                let fmtWind = wind { speed = fmtWindSpeed (speed wind) isImperial
-                                   , gust = fmtWindSpeed (gust wind) isImperial }
+                let fmtWind = wind { speed = fmtWindSpeed (speed wind) isImperial }
                 pure fmtWind
         _ -> fetchWind city tCache
     where
@@ -230,8 +229,7 @@ getWind city isImperial = do
                     (WindCache wind, currTime))
 
             -- format wind
-            let fmtWind = wind { speed = fmtWindSpeed (speed wind) isImperial
-                               , gust = fmtWindSpeed (gust wind) isImperial }
+            let fmtWind = wind { speed = fmtWindSpeed (speed wind) isImperial }
             pure fmtWind
 
 getForecast :: Text -> Bool -> AppM Forecast
@@ -253,8 +251,7 @@ getForecast city isImperial = do
                         (fcElement { fcMin = fmtTemperature (fcMin fcElement) isImperial
                                    , fcMax = fmtTemperature (fcMax fcElement) isImperial
                                    , fcFL = fmtTemperature (fcFL fcElement) isImperial
-                                   , fcWindSpeed = fmtWindSpeed (fcWindSpeed fcElement) isImperial
-                                   , fcWindGust = fmtWindSpeed (fcWindGust fcElement) isImperial})) (forecast fc) }
+                                   , fcWindSpeed = fmtWindSpeed (fcWindSpeed fcElement) isImperial})) (forecast fc) }
                 pure fmtForecast
         _ -> fetchForecast city tCache
     where
@@ -284,8 +281,7 @@ getForecast city isImperial = do
                     (fcElement { fcMin = fmtTemperature (fcMin fcElement) isImperial
                                , fcMax = fmtTemperature (fcMax fcElement) isImperial
                                , fcFL = fmtTemperature (fcFL fcElement) isImperial
-                               , fcWindSpeed = fmtWindSpeed (fcWindSpeed fcElement) isImperial
-                               , fcWindGust = fmtWindSpeed (fcWindGust fcElement) isImperial})) (forecast fc) }
+                               , fcWindSpeed = fmtWindSpeed (fcWindSpeed fcElement) isImperial})) (forecast fc) }
             pure fmtForecast
             
 getMoonPhase :: AppM Moon

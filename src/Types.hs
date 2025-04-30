@@ -53,7 +53,6 @@ instance FromJSON Metrics
 -- The wind data type, representing the wind speed, the wind direction and the direction icon
 data Wind = Wind 
     { speed :: Text
-    , gust :: Text
     , direction :: Text
     , arrow :: Text
     } deriving (Show, Eq, Generic)
@@ -69,20 +68,18 @@ data ForecastElement = ForecastElement
     , fcEmoji :: Text
     , fcFL :: Text
     , fcWindSpeed :: Text
-    , fcWindGust :: Text
     , fcWindDir :: Text
     , fcWindArrow :: Text
     } deriving (Show, Eq, Generic)
 instance ToJSON ForecastElement where
-    toJSON (ForecastElement dt tempMin tempMax cond emoji fl wSpeed wGust wDir wArr) =
-        object [ "date" .= dt
-               , "temperatureMin" .= tempMin
-               , "temperatureMax" .= tempMax
+    toJSON (ForecastElement dt tempMin tempMax cond emoji fl wSpeed wDir wArr) =
+        object [ "date" .= pack (formatTime defaultTimeLocale "%a, %d/%m/%Y" dt)
+               , "tempMin" .= tempMin
+               , "tempMax" .= tempMax
                , "condition" .= cond
                , "condEmoji" .= emoji
                , "feelsLike" .= fl
                , "windSpeed" .= wSpeed
-               , "windGust" .= wGust
                , "windDirection" .= wDir
                , "windArrow" .= wArr
                ]

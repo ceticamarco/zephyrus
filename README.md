@@ -99,7 +99,6 @@ will yield
 {
   "arrow": "↙",
   "direction": "ENE",
-  "gust": "19.3 km/h",
   "speed": "11.3 km/h"
 }
 ```
@@ -125,11 +124,10 @@ will yield
       "condition": "Rain",
       "date": "2025-05-03",
       "feelsLike": "0.9°C",
-      "temperatureMax": "5.6°C",
-      "temperatureMin": "-2.4°C",
+      "tempMax": "5.6°C",
+      "tempMin": "-2.4°C",
       "windArrow": "↗",
       "windDirection": "SSW",
-      "windGust": "25.1 km/h",
       "windSpeed": "14.7 km/h"
     },
     {
@@ -137,11 +135,10 @@ will yield
       "condition": "Snow",
       "date": "2025-05-04",
       "feelsLike": "7.2°C",
-      "temperatureMax": "9.4°C",
-      "temperatureMin": "2.1°C",
+      "tempMax": "9.4°C",
+      "tempMin": "2.1°C",
       "windArrow": "↘",
       "windDirection": "NNW",
-      "windGust": "33.7 km/h",
       "windSpeed": "13.9 km/h"
     }
   ]

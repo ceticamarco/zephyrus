@@ -219,14 +219,12 @@ getCityWind city apiKey = runReq defaultHttpConfig $ do
             -- Extract keys from JSON response
             current <- root .: "current"
             windSpeed <- current .: "wind_speed" :: Parser Double
-            windGust <- current .: "wind_gust" :: Parser Double
             windDegree <- current .: "wind_deg" :: Parser Double
 
             -- Get cardinal direction and direction arrow
             let (windDirection, windArrow) = getCardinalDir windDegree
 
             pure $ Wind { speed = (pack . show) windSpeed
-                        , gust = (pack . show) windGust
                         , direction = windDirection
                         , arrow = windArrow
                         }
@@ -275,7 +273,6 @@ getCityForecast city apiKey = runReq defaultHttpConfig $ do
             -- Get wind speed, gust and direction
             windSpeed <- obj .: "wind_speed" :: Parser Double
             windDegree <- obj .: "wind_deg" :: Parser Double
-            windGust <- obj .: "wind_gust" :: Parser Double
 
             -- Format UNIX timestamp as UTC time
             let utcTime = posixSecondsToUTCTime (fromIntegral (unixTS :: Int))
@@ -296,7 +293,6 @@ getCityForecast city apiKey = runReq defaultHttpConfig $ do
                 , fcEmoji = emojiVal
                 , fcFL = (pack . show) fl
                 , fcWindSpeed = (pack . show) windSpeed
-                , fcWindGust = (pack . show) windGust
                 , fcWindDir = windDirection
                 , fcWindArrow = windArrow
                 }
