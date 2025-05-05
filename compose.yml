@@ -1,11 +1,11 @@
 services:
   app:
     build: .
-    container_name: "zephyrus"
+    container_name: "zephyr"
     environment:
-      ZEPHYRUS_PORT: 3000   # Listen port
-      ZEPHYRUS_TOKEN: ""    # OpenWeatherMap API Key
-      ZEPHYRUS_CACHE_TTL: 3 # Cache time-to-live in hours
+      ZEPHYR_PORT: 3000   # Listen port
+      ZEPHYR_TOKEN: ""    # OpenWeatherMap API Key
+      ZEPHYR_CACHE_TTL: 3 # Cache time-to-live in hours
     restart: always
     volumes:
       - "/etc/localtime:/etc/localtime:ro"

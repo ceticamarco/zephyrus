@@ -31,7 +31,7 @@ data Weather = Weather
     } deriving (Show, Eq, Generic)
 instance ToJSON Weather where
     toJSON (Weather dt temp cond fl emoji) =
-        object [ "date" .= pack (formatTime defaultTimeLocale "%a, %d/%m/%Y" dt)
+        object [ "date" .= pack (formatTime defaultTimeLocale "%A, %d/%m/%Y" dt)
                , "temperature" .= temp
                , "condition" .= cond
                , "feelsLike" .= fl
@@ -73,7 +73,7 @@ data ForecastElement = ForecastElement
     } deriving (Show, Eq, Generic)
 instance ToJSON ForecastElement where
     toJSON (ForecastElement dt tempMin tempMax cond emoji fl wSpeed wDir wArr) =
-        object [ "date" .= pack (formatTime defaultTimeLocale "%a, %d/%m/%Y" dt)
+        object [ "date" .= pack (formatTime defaultTimeLocale "%A, %d/%m/%Y" dt)
                , "tempMin" .= tempMin
                , "tempMax" .= tempMax
                , "condition" .= cond
@@ -112,6 +112,9 @@ data CacheElement = WeatherCache Weather
                   | MoonCache Moon
                   deriving (Show, Eq)
 
+-- The cache data type, representing a mapping between a city and its weather
+type ZCache = Map Text (CacheElement, UTCTime)
+
 -- The statistical database, representing a mapping between "$city" and its weather
 type StatDB = Map Text Weather
 
@@ -144,9 +147,6 @@ instance ToJSON StatResult where
                , "anomaly" .= an
                ]
 instance FromJSON StatResult
-
--- The cache data type, representing a mapping between a city and its weather
-type ZCache = Map Text (CacheElement, UTCTime)
 
 -- The state of the weather cache between multiple requests
 data State = State

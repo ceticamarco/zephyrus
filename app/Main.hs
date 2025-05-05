@@ -49,17 +49,17 @@ app state = serve api (hoistServer api (appToHandler state) server)
 main :: IO ()
 main = do
     port <- getEnvVariable
-        "ZEPHYRUS_PORT"
+        "ZEPHYR_PORT"
         readMaybe
         validatePort
 
     _ <- getEnvVariable
-        "ZEPHYRUS_CACHE_TTL"
+        "ZEPHYR_CACHE_TTL"
         readMaybe
         validateTTL
 
     _ <- getEnvVariable
-        "ZEPHYRUS_TOKEN"
+        "ZEPHYR_TOKEN"
         validateToken
         pure
 

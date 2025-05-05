@@ -42,8 +42,8 @@ getEmoji :: Text -> Bool -> Text
 getEmoji condition' isNight =
     case condition' of
         "Thunderstorm" -> "⛈️"
-        "Drizzle"      -> "🌦 "
-        "Rain"         -> "🌧 "
+        "Drizzle"      -> "🌦️"
+        "Rain"         -> "🌧️"
         "Snow"         -> "☃️"
         "Mist"         -> "💭"
         "Smoke"        -> "💭"
@@ -53,31 +53,33 @@ getEmoji condition' isNight =
         "Sand"         -> "💭"
         "Ash"          -> "💭"
         "Squall"       -> "💭"
-        "Tornado"      -> "🌪 "
+        "Tornado"      -> "🌪️"
         "Clear"        -> if isNight then "🌙" else "☀️"
         "Clouds"       -> "☁️"
+        "SunWithCloud" -> "🌤️"
+        "CloudWithSun" -> "🌥️"
         _              -> "❓"
 
 getCardinalDir :: Double -> (Text, Text)
 getCardinalDir windDeg =
     -- Each cardinal direction represents a segment of 22.5 degrees
     let cardinalDirections =
-            [ ("N", "↓")   -- 0/360 DEG
-            , ("NNE", "↙") -- 22.5 DEG
-            , ("NE",  "↙") -- 45 DEG
-            , ("ENE", "↙") -- 67.5 DEG
-            , ("E",   "←") -- 90 DEG
-            , ("ESE", "↖") -- 112.5 DEG
-            , ("SE",  "↖") -- 135 DEG
-            , ("SSE", "↖") -- 157.5 DEG
-            , ("S",   "↑") -- 180 DEG
-            , ("SSW", "↗") -- 202.5 DEG
-            , ("SW",  "↗") -- 225 DEG
-            , ("WSW", "↗") -- 247.5 DEG
-            , ("W",   "→") -- 270 DEG
-            , ("WNW", "↘") -- 292.5 DEG
-            , ("NW",  "↘") -- 315 DEG
-            , ("NNW", "↘") -- 337.5 DEG
+            [ ("N", "⬇️")   -- 0/360 DEG
+            , ("NNE", "↙️") -- 22.5 DEG
+            , ("NE",  "↙️") -- 45 DEG
+            , ("ENE", "↙️") -- 67.5 DEG
+            , ("E",   "⬅️") -- 90 DEG
+            , ("ESE", "↖️") -- 112.5 DEG
+            , ("SE",  "↖️") -- 135 DEG
+            , ("SSE", "↖️") -- 157.5 DEG
+            , ("S",   "⬆️") -- 180 DEG
+            , ("SSW", "↗️") -- 202.5 DEG
+            , ("SW",  "↗️") -- 225 DEG
+            , ("WSW", "↗️") -- 247.5 DEG
+            , ("W",   "➡️") -- 270 DEG
+            , ("WNW", "↘️") -- 292.5 DEG
+            , ("NW",  "↘️") -- 315 DEG
+            , ("NNW", "↘️") -- 337.5 DEG
             ]
         -- Computes "idx ≡ round(wind_deg / 22.5) (mod 16)"
         -- to ensure that values above 360 degrees or below 0 degrees
@@ -137,7 +139,8 @@ getCityWeather city appid = runReq defaultHttpConfig $ do
             -- Extract keys from JSON response
             current <- root .: "current"
             weatherArray <- current .: "weather"
-            conditionVal <- withArray "weather" (extractField "main" . V.toList) weatherArray
+            condTitle <- withArray "weather" (extractField "main" . V.toList) weatherArray
+            condDesc <- withArray "weather" (extractField "description" . V.toList) weatherArray
             temp <- current .: "temp" :: Parser Double
             unixTs <- current .: "dt"
             icon <- withArray "weather" (extractField "icon" . V.toList) weatherArray
@@ -147,6 +150,12 @@ getCityWeather city appid = runReq defaultHttpConfig $ do
             let utcTime = posixSecondsToUTCTime (fromIntegral (unixTs :: Int))
             let weatherDate = utctDay utcTime
 
+            -- Set condition accordingly to weather description
+            let conditionVal = case condDesc of
+                    "few clouds"    -> "SunWithCloud"
+                    "broken clouds" -> "CloudWithSun"
+                    _               -> condTitle
+
             -- Get emoji from weather condition
             let isNight = "n" `isSuffixOf` icon
             let emojiVal = getEmoji conditionVal isNight
@@ -155,7 +164,7 @@ getCityWeather city appid = runReq defaultHttpConfig $ do
                 { date = weatherDate
                 , temperature = (pack . show) temp
                 , feelsLike = (pack . show) feelsLikeTemp
-                , condition = conditionVal
+                , condition = condTitle
                 , condEmoji = emojiVal 
                 })
 

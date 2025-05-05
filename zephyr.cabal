@@ -1,8 +1,8 @@
 cabal-version:      3.0
-name:               zephyrus
-version:            0.1.0.3
-synopsis:           HTTP service for weather statistics
-homepage:           https://github.com/ceticamarco/zephyrus
+name:               zephyr
+version:            0.1.0.4
+synopsis:           real-time weather forecast service
+homepage:           https://github.com/ceticamarco/zephyr
 license:            GPL-3.0-or-later
 license-file:       LICENSE
 author:             Marco Cetica
@@ -13,7 +13,7 @@ build-type:         Simple
 common warnings
     ghc-options: -Wall -Wextra -Werror -O2 -threaded
 
-library zephyrus-lib
+library zephyr-lib
     import:            warnings
     exposed-modules:   Server Controller Error Model Statistics Types
     hs-source-dirs:    src
@@ -31,11 +31,11 @@ library zephyrus-lib
                       , time
     default-language: Haskell2010
 
-executable zephyrus
+executable zephyr
     import:           warnings
     main-is:          Main.hs
     build-depends:    base >= 4.7 && <5
-                      , zephyrus-lib
+                      , zephyr-lib
                       , servant
                       , servant-server
                       , containers
@@ -46,13 +46,13 @@ executable zephyrus
     hs-source-dirs:   app
     default-language: Haskell2010
 
-test-suite zephyrus-test
+test-suite zephyr-test
     type:             exitcode-stdio-1.0
     main-is:          Tests.hs
     other-modules:    StatsTests ModelTests
     hs-source-dirs:   test
     build-depends:     base >= 4.7 && <5
-                      , zephyrus-lib
+                      , zephyr-lib
                       , HUnit
     default-language: Haskell2010
     ghc-options:      -Wall -Wextra -Werror

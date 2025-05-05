@@ -1,27 +1,27 @@
 <div align="center">
-<h1>Zephyrus 🌲</h1>
+<h1>Zephyr 🌲</h1>
     
 <h6><i>real-time weather forecast service</i></h6>
 
-[![](https://github.com/ceticamarco/zephyrus/actions/workflows/docker.yml/badge.svg)](https://github.com/ceticamarco/zephyrus/actions/workflows/docker.yml)
-[![](https://github.com/ceticamarco/zephyrus/actions/workflows/linter.yml/badge.svg)](https://github.com/ceticamarco/zephyrus/actions/workflows/linter.yml)
+[![](https://github.com/ceticamarco/zephyr/actions/workflows/docker.yml/badge.svg)](https://github.com/ceticamarco/zephyr/actions/workflows/docker.yml)
+[![](https://github.com/ceticamarco/zephyr/actions/workflows/linter.yml/badge.svg)](https://github.com/ceticamarco/zephyr/actions/workflows/linter.yml)
 
 </div>
 
-**Zephyrus** is a lightweight HTTP weather service designed to provide a simple way to
+**Zephyr** is a lightweight HTTP weather service designed to provide a simple way to
 gather meteorological data and apply statistical analysis to past weather conditions. It's written in 
 Haskell using [Servant](https://www.servant.dev/) and [OpenWeatherMap](https://openweathermap.org).
 
 I've built this service out of frustration with existing
 weather platforms cluttered with ads, paywalls, clickbait contents and unnecessary features.
-Zephyrus only gets you the essential information about the weather conditions of a given location without any additional nonsense.
+Zephyr only gets you the essential information about the weather conditions of a given location without any additional nonsense.
 
 This service communicates through a JSON API, making
 it suitable for use in any kind of project or device. I already use it on my phone,
 on my terminal, on the tmux's status bar and on a couple of smart bedside alarm clocks I've built.
 
 ## Basic Usage
-As stated before, Zephyrus communicates via HTTP using the JSON format; therefore, you can
+As stated before, Zephyr communicates via HTTP using the JSON format; therefore, you can
 query it through any kind of HTTP client such as cURL. Below you can find some examples of use.
 
 ### Weather
@@ -37,9 +37,9 @@ will yield the following:
 {
   "condEmoji": "☀️",
   "condition": "Clear",
-  "date": "Tue, 29/04/2025",
-  "feelsLike": "24.6°C",
-  "temperature": "24.6°C"
+  "date": "Tuesday, 29/04/2025",
+  "feelsLike": "21°C",
+  "temperature": "23°C"
 }
 ```
 To get results in imperial units instead of metric, append the `i`(for _imperial_) query parameter to the URL. For example
@@ -54,9 +54,9 @@ which will yield:
 {
   "condEmoji": "☀️",
   "condition": "Clear",
-  "date": "Tue, 29/04/2025",
-  "feelsLike": "76.2°F",
-  "temperature": "76.4°F"
+  "date": "Tuesday, 29/04/2025",
+  "feelsLike": "69°F",
+  "temperature": "73°F"
 }
 ```
 
@@ -74,7 +74,7 @@ will yield:
 
 ```json
 {
-  "dewPoint": "14.9°C",
+  "dewPoint": "15°C",
   "humidity": "66%",
   "pressure": "1015 hPa",
   "uvIndex": 0,
@@ -97,7 +97,7 @@ will yield
 
 ```json
 {
-  "arrow": "↙",
+  "arrow": "↙️",
   "direction": "ENE",
   "speed": "11.3 km/h"
 }
@@ -122,22 +122,22 @@ will yield
     {
       "condEmoji": "🌧 ",
       "condition": "Rain",
-      "date": "2025-05-03",
-      "feelsLike": "0.9°C",
-      "tempMax": "5.6°C",
-      "tempMin": "-2.4°C",
-      "windArrow": "↗",
+      "date": "Tuesday, 06/05/2025",
+      "feelsLike": "0°C",
+      "tempMax": "6°C",
+      "tempMin": "-2°C",
+      "windArrow": "↗️",
       "windDirection": "SSW",
       "windSpeed": "14.7 km/h"
     },
     {
       "condEmoji": "☃️",
       "condition": "Snow",
-      "date": "2025-05-04",
-      "feelsLike": "7.2°C",
-      "tempMax": "9.4°C",
-      "tempMin": "2.1°C",
-      "windArrow": "↘",
+      "date": "Wednesday, 07/05/2025",
+      "feelsLike": "7°C",
+      "tempMax": "9°C",
+      "tempMin": "2°C",
+      "windArrow": "↘️",
       "windDirection": "NNW",
       "windSpeed": "13.9 km/h"
     }
@@ -176,7 +176,7 @@ $$
 where $\theta$ represent the moon phase value.
 
 ## Statistical analysis
-In addition to the previous routes, Zephyrus provides another endpoint, called `/stats/:city`,
+In addition to the previous routes, Zephyr provides another endpoint, called `/stats/:city`,
 which can be used to retrieve additional statistics about the weather of the
 previous days. This includes the arithmetical mean of the temperatures, 
 the maximum and the minimum values, the median, the mode and the standard deviation.
@@ -184,7 +184,7 @@ the maximum and the minimum values, the median, the mode and the standard deviat
 This endpoint becomes available only after the system has gathered sufficient
 _updated_ data; that if and only if there are **at least** two weather
 records for a given location, and they are **within the previous 48 hours**. If these
-two conditions aren't met, Zephyrus will refuse to provide a statistical report.
+two conditions aren't met, Zephyr will refuse to provide a statistical report.
 
 After enough data has been recorded in the in-memory database, you will be able
 to retrieve the statistics, for example:
@@ -208,7 +208,7 @@ will yield(not real data):
 }
 ```
 
-After enough data has been recorded, Zephyrus can also detect and report
+After enough data has been recorded, Zephyr can also detect and report
 temperature anomalies using a built-in statistical model(more about that below).
 
 For instance, two temperature spikes(high and low) of `+30°C` and `-15°C` will
@@ -279,16 +279,16 @@ is consumed and is reset at each restart. At the time being, there is no plan
 to make data gathering non-volatile.
 
 ## Embedded Cache System
-In order to minimize the amount of calls made to the OpenWeatherMap servers, Zephyrus
+In order to minimize the amount of calls made to the OpenWeatherMap servers, Zephyr
 provides a built-in, in-memory cache data structure to store fetched weather data.
-Each time a client requests any kind of weather data of a given location, Zephyrus
+Each time a client requests any kind of weather data of a given location, Zephyr
 tries to search it first on the cache system; if it is found, the cached value is returned
 otherwise a new API call is made and the retrieved values is added to the cache before
 being returned to the client. The expiration date, expressed in hours, is controlled via
-the `ZEPHYRUS_CACHE_TTL` environment variable. Once a cached value expires, Zephyrus retrieves
+the `ZEPHYR_CACHE_TTL` environment variable. Once a cached value expires, Zephyr retrieves
 fresh data from OpenWeatherMap servers.
 
-The caching system significantly improves Zephyrus performance by decreasing latency. Additionally,
+The caching system significantly improves Zephyr performance by decreasing latency. Additionally,
 it helps minimize the number of API calls made to OpenWeatherMap' servers, an important factor
 if you are using the OpenWeatherMap free tier.
 
@@ -297,23 +297,23 @@ Before deploying the service, you need to configure the following environment va
 
 | Variable             | Meaning                                |
 |----------------------|----------------------------------------|
-| `ZEPHYRUS_PORT`      | Listen port                            |
-| `ZEPHYRUS_TOKEN`     | OpenWeatherMap API key                 |
-| `ZEPHYRUS_CACHE_TTL` | Cache time-to-live(expressed in hours) |
+| `ZEPHYR_PORT`        | Listen port                            |
+| `ZEPHYR_TOKEN`       | OpenWeatherMap API key                 |
+| `ZEPHYR_CACHE_TTL`   | Cache time-to-live(expressed in hours) |
 
-Each value must be set _before_ launching the application. If you plan to deploy Zephyrus
+Each value must be set _before_ launching the application. If you plan to deploy Zephyr
 using Docker, you can specify these environment variables by editing the `compose.yml` file.
 
 You will also need an OpenWeatherMap API key, you can get one for free by following
 the instructions [listed on their website](https://openweathermap.org/api).
 
 > [!NOTE]
-> Zephyrus is designed to work with OpenWeatherMap's free tier. 
+> Zephyr is designed to work with OpenWeatherMap's free tier. 
 > As long as you stay within the daily limit of 1,000 calls, you won’t need to pay.
 
 
 ## Deploy
-The easiest way to deploy Zephyrus is by using Docker. In order to launch it, issue the following
+The easiest way to deploy Zephyr is by using Docker. In order to launch it, issue the following
 command:
 
 ```sh
