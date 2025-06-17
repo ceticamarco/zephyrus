@@ -128,9 +128,8 @@ func GetWeather(city *types.City, apiKey string) (types.Weather, error) {
 	}
 
 	// Format UNIX timestamp as 'YYYY-MM-DD'
-	// unixTs, _ := strconv.Atoi(weather.Current.Timestamp)
 	utcTime := time.Unix(int64(weather.Current.Timestamp), 0)
-	weatherDate := utcTime.UTC()
+	weatherDate := &types.ZephyrDate{Time: utcTime.UTC()}
 
 	// Set condition accordingly to weather description
 	var condition string
