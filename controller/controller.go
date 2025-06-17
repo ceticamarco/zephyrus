@@ -47,7 +47,7 @@ func GetWeather(res http.ResponseWriter, req *http.Request, cache *types.Cache[t
 	// Check whether the 'i' parameter(imperial mode) is specified
 	isImperial := req.URL.Query().Has("i")
 
-	weather, found := cache.GetCache(cityName, vars.TimeToLive)
+	weather, found := cache.GetEntry(cityName, vars.TimeToLive)
 	if found {
 		// Format weather values and then return it
 		weather.Temperature = fmtTemperature(weather.Temperature, isImperial)

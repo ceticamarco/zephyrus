@@ -67,6 +67,7 @@ func GetCoordinates(cityName string, apiKey string) (types.City, error) {
 	if err != nil {
 		return types.City{}, err
 	}
+	defer res.Body.Close()
 
 	var geoArr []types.City
 	if err := json.NewDecoder(res.Body).Decode(&geoArr); err != nil {
@@ -91,8 +92,8 @@ func GetWeather(city *types.City, apiKey string) (types.Weather, error) {
 	}
 
 	params := url.Query()
-	params.Set("lat", strconv.FormatFloat(city.Lat, 'E', -1, 64))
-	params.Set("lon", strconv.FormatFloat(city.Lon, 'E', -1, 64))
+	params.Set("lat", strconv.FormatFloat(city.Lat, 'f', -1, 64))
+	params.Set("lon", strconv.FormatFloat(city.Lon, 'f', -1, 64))
 	params.Set("appid", apiKey)
 	params.Set("units", "metric")
 	params.Set("exclude", "minutely,hourly,daily,alerts")
@@ -103,6 +104,7 @@ func GetWeather(city *types.City, apiKey string) (types.Weather, error) {
 	if err != nil {
 		return types.Weather{}, err
 	}
+	defer res.Body.Close()
 
 	// Structures representing the JSON response
 	type InfoRes struct {
@@ -147,8 +149,8 @@ func GetWeather(city *types.City, apiKey string) (types.Weather, error) {
 
 	return types.Weather{
 		Date:        weatherDate,
-		Temperature: strconv.FormatFloat(weather.Current.Temperature, 'E', -1, 64),
-		FeelsLike:   strconv.FormatFloat(weather.Current.FeelsLike, 'E', -1, 64),
+		Temperature: strconv.FormatFloat(weather.Current.Temperature, 'f', -1, 64),
+		FeelsLike:   strconv.FormatFloat(weather.Current.FeelsLike, 'f', -1, 64),
 		Condition:   weather.Current.Weather[0].Title,
 		Emoji:       emoji,
 	}, nil

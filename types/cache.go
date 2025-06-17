@@ -33,8 +33,8 @@ func InitCache() *Caches {
 	}
 }
 
-func (cache *Cache[T]) GetCache(key string, ttl int8) (T, bool) {
-	val, isPresent := cache.Data[key+"_weather"]
+func (cache *Cache[T]) GetEntry(key string, ttl int8) (T, bool) {
+	val, isPresent := cache.Data[key]
 
 	// If key is not present, return a zero value
 	if !isPresent {
@@ -57,7 +57,7 @@ func (cache *Cache[T]) AddEntry(entry T, cityName string) {
 	switch any(entry).(type) {
 	case Weather:
 		{
-			cache.Data[cityName+"_weather"] = CacheEntity[T]{
+			cache.Data[cityName] = CacheEntity[T]{
 				Element:   entry,
 				Timestamp: currentTime,
 			}
