@@ -6,7 +6,7 @@ import (
 
 // CacheType, representing the abstract value of a CacheEntity
 type CacheType interface {
-	Weather | Metrics
+	Weather | Metrics | Wind | Forecast
 }
 
 // CacheEntity, representing the value of the cache
@@ -22,14 +22,18 @@ type Cache[T CacheType] struct {
 
 // Caches, representing a grouping of the various caches
 type Caches struct {
-	WeatherCache Cache[Weather]
-	MetricsCache Cache[Metrics]
+	WeatherCache  Cache[Weather]
+	MetricsCache  Cache[Metrics]
+	WindCache     Cache[Wind]
+	ForecastCache Cache[Forecast]
 }
 
 func InitCache() *Caches {
 	return &Caches{
-		WeatherCache: Cache[Weather]{Data: make(map[string]CacheEntity[Weather])},
-		MetricsCache: Cache[Metrics]{Data: make(map[string]CacheEntity[Metrics])},
+		WeatherCache:  Cache[Weather]{Data: make(map[string]CacheEntity[Weather])},
+		MetricsCache:  Cache[Metrics]{Data: make(map[string]CacheEntity[Metrics])},
+		WindCache:     Cache[Wind]{Data: make(map[string]CacheEntity[Wind])},
+		ForecastCache: Cache[Forecast]{Data: make(map[string]CacheEntity[Forecast])},
 	}
 }
 

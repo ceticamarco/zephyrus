@@ -39,6 +39,14 @@ func main() {
 		controller.GetMetrics(res, req, &cache.MetricsCache, &vars)
 	})
 
+	http.HandleFunc("/wind/", func(res http.ResponseWriter, req *http.Request) {
+		controller.GetWind(res, req, &cache.WindCache, &vars)
+	})
+
+	http.HandleFunc("/forecast/", func(res http.ResponseWriter, req *http.Request) {
+		controller.GetForecast(res, req, &cache.ForecastCache, &vars)
+	})
+
 	listenAddr := fmt.Sprintf(":%s", port)
 	log.Printf("Server listening on %s", listenAddr)
 	http.ListenAndServe(listenAddr, nil)

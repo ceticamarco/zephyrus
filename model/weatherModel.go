@@ -11,7 +11,7 @@ import (
 	"github.com/ceticamarco/zephyr/types"
 )
 
-func getEmoji(condition string, isNight bool) string {
+func GetEmoji(condition string, isNight bool) string {
 	switch condition {
 	case "Thunderstorm":
 		return "⛈️"
@@ -101,7 +101,7 @@ func GetWeather(city *types.City, apiKey string) (types.Weather, error) {
 
 	// Get emoji from weather condition
 	isNight := strings.HasSuffix(weather.Current.Weather[0].Icon, "n")
-	emoji := getEmoji(condition, isNight)
+	emoji := GetEmoji(condition, isNight)
 
 	return types.Weather{
 		Date:        weatherDate,
