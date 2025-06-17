@@ -6,6 +6,6 @@ type Metrics struct {
 	Humidity   string `json:"humidity"`
 	Pressure   string `json:"pressure"`
 	DewPoint   string `json:"dewPoint"`
-	UvIndex    int8   `json:"uvIndex"`
+	UvIndex    string `json:"uvIndex"`
 	Visibility string `json:"visibility"`
 }

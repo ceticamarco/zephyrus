@@ -49,7 +49,7 @@ func GetWeather(res http.ResponseWriter, req *http.Request, cache *types.Cache[t
 
 	weather, found := cache.GetEntry(cityName, vars.TimeToLive)
 	if found {
-		// Format weather values and then return it
+		// Format weather object and then return it
 		weather.Temperature = fmtTemperature(weather.Temperature, isImperial)
 		weather.FeelsLike = fmtTemperature(weather.FeelsLike, isImperial)
 
@@ -72,10 +72,60 @@ func GetWeather(res http.ResponseWriter, req *http.Request, cache *types.Cache[t
 		// Add result to cache
 		cache.AddEntry(weather, cityName)
 
-		// Format weather values and then return it
+		// Format weather object and then return it
 		weather.Temperature = fmtTemperature(weather.Temperature, isImperial)
 		weather.FeelsLike = fmtTemperature(weather.FeelsLike, isImperial)
 
 		jsonValue(res, weather)
+	}
+}
+
+func GetMetrics(res http.ResponseWriter, req *http.Request, cache *types.Cache[types.Metrics], vars *types.Variables) {
+	if req.Method != http.MethodGet {
+		jsonError(res, "error", "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract city name from '/metrics/:city'
+	path := strings.TrimPrefix(req.URL.Path, "/metrics/")
+	cityName := strings.Trim(path, "/") // Remove trailing slash if present
+
+	// Check whether the 'i' parameter(imperial mode) is specified
+	isImperial := req.URL.Query().Has("i")
+
+	metrics, found := cache.GetEntry(cityName, vars.TimeToLive)
+	if found {
+		// Format metrics object and then return it
+		metrics.Humidity = fmt.Sprintf("%s%%", metrics.Humidity)
+		metrics.Pressure = fmt.Sprintf("%s hPa", metrics.Pressure)
+		metrics.DewPoint = fmtTemperature(metrics.DewPoint, isImperial)
+		metrics.Visibility = fmt.Sprintf("%skm", metrics.Visibility)
+
+		jsonValue(res, metrics)
+	} else {
+		// Get city coordinates
+		city, err := model.GetCoordinates(cityName, vars.Token)
+		if err != nil {
+			jsonError(res, "error", err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		// Get city weather
+		metrics, err := model.GetMetrics(&city, vars.Token)
+		if err != nil {
+			jsonError(res, "error", err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		// Add result to cache
+		cache.AddEntry(metrics, cityName)
+
+		// Format metrics object and then return it
+		metrics.Humidity = fmt.Sprintf("%s%%", metrics.Humidity)
+		metrics.Pressure = fmt.Sprintf("%s hPa", metrics.Pressure)
+		metrics.DewPoint = fmtTemperature(metrics.DewPoint, isImperial)
+		metrics.Visibility = fmt.Sprintf("%skm", metrics.Visibility)
+
+		jsonValue(res, metrics)
 	}
 }

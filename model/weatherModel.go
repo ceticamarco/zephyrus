@@ -2,7 +2,6 @@ package model
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -10,11 +9,6 @@ import (
 	"time"
 
 	"github.com/ceticamarco/zephyr/types"
-)
-
-const (
-	GEO_URL = "https://api.openweathermap.org/geo/1.0/direct"
-	WTR_URL = "https://api.openweathermap.org/data/3.0/onecall"
 )
 
 func getEmoji(condition string, isNight bool) string {
@@ -27,8 +21,8 @@ func getEmoji(condition string, isNight bool) string {
 		return "🌧️"
 	case "Snow":
 		return "☃️"
-	case "Mist", "Smoke", "Haze", "Dust", "Fog", "Sand", "Ash", "Squall":
-		return "🌫️"
+	case "Mist", "Smoke", "Haze", "Dust", "Fog", "Sand", "Ash", "Squall", "Clouds":
+		return "☁️"
 	case "Tornado":
 		return "🌪️"
 	case "Clear":
@@ -39,8 +33,6 @@ func getEmoji(condition string, isNight bool) string {
 				return "☀️"
 			}
 		}
-	case "Clouds":
-		return "☁️"
 	case "SunWithCloud":
 		return "🌤️"
 	case "CloudWithSun":
@@ -48,41 +40,6 @@ func getEmoji(condition string, isNight bool) string {
 	}
 
 	return "❓"
-}
-
-func GetCoordinates(cityName string, apiKey string) (types.City, error) {
-	url, err := url.Parse(GEO_URL)
-	if err != nil {
-		return types.City{}, err
-	}
-
-	params := url.Query()
-	params.Set("q", cityName)
-	params.Set("limit", "1")
-	params.Set("appid", apiKey)
-
-	url.RawQuery = params.Encode()
-
-	res, err := http.Get(url.String())
-	if err != nil {
-		return types.City{}, err
-	}
-	defer res.Body.Close()
-
-	var geoArr []types.City
-	if err := json.NewDecoder(res.Body).Decode(&geoArr); err != nil {
-		return types.City{}, err
-	}
-
-	if len(geoArr) == 0 {
-		return types.City{}, errors.New("Cannot find this city")
-	}
-
-	return types.City{
-		Name: geoArr[0].Name,
-		Lat:  geoArr[0].Lat,
-		Lon:  geoArr[0].Lon,
-	}, nil
 }
 
 func GetWeather(city *types.City, apiKey string) (types.Weather, error) {

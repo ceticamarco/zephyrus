@@ -35,6 +35,10 @@ func main() {
 		controller.GetWeather(res, req, &cache.WeatherCache, &vars)
 	})
 
+	http.HandleFunc("/metrics/", func(res http.ResponseWriter, req *http.Request) {
+		controller.GetMetrics(res, req, &cache.MetricsCache, &vars)
+	})
+
 	listenAddr := fmt.Sprintf(":%s", port)
 	log.Printf("Server listening on %s", listenAddr)
 	http.ListenAndServe(listenAddr, nil)

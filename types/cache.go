@@ -54,13 +54,9 @@ func (cache *Cache[T]) GetEntry(key string, ttl int8) (T, bool) {
 func (cache *Cache[T]) AddEntry(entry T, cityName string) {
 	currentTime := time.Now()
 
-	switch any(entry).(type) {
-	case Weather:
-		{
-			cache.Data[cityName] = CacheEntity[T]{
-				Element:   entry,
-				Timestamp: currentTime,
-			}
-		}
+	cache.Data[cityName] = CacheEntity[T]{
+		Element:   entry,
+		Timestamp: currentTime,
 	}
+
 }
