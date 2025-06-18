@@ -6,7 +6,7 @@ import (
 )
 
 type ZephyrDate struct {
-	time.Time
+	Date time.Time
 }
 
 func (date *ZephyrDate) UnmarshalJSON(b []byte) error {
@@ -16,7 +16,7 @@ func (date *ZephyrDate) UnmarshalJSON(b []byte) error {
 	}
 
 	var err error
-	date.Time, err = time.Parse("Monday, 2006/01/02", s)
+	date.Date, err = time.Parse("Monday, 2006/01/02", s)
 	if err != nil {
 		return err
 	}
@@ -25,11 +25,11 @@ func (date *ZephyrDate) UnmarshalJSON(b []byte) error {
 }
 
 func (date *ZephyrDate) MarshalJSON() ([]byte, error) {
-	if date.Time.IsZero() {
+	if date.Date.IsZero() {
 		return []byte("\"\""), nil
 	}
 
-	fmtDate := date.Time.Format("Monday, 2006/01/02")
+	fmtDate := date.Date.Format("Monday, 2006/01/02")
 
 	return []byte("\"" + fmtDate + "\""), nil
 }

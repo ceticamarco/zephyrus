@@ -47,6 +47,19 @@ func fmtWind(windSpeed string, isImperial bool) string {
 	return fmt.Sprintf("%.1f km/h", (parsedSpeed * 3.6))
 }
 
+func deepCopyForecast(original types.Forecast) types.Forecast {
+	// Copy the outer structure
+	fc_copy := original
+
+	// Allocate enough space
+	fc_copy.Forecast = make([]types.ForecastEntity, len(original.Forecast))
+
+	// Copy inner structure
+	copy(fc_copy.Forecast, original.Forecast)
+
+	return fc_copy
+}
+
 func GetWeather(res http.ResponseWriter, req *http.Request, cache *types.Cache[types.Weather], vars *types.Variables) {
 	if req.Method != http.MethodGet {
 		jsonError(res, "error", "method not allowed", http.StatusMethodNotAllowed)
@@ -202,15 +215,19 @@ func GetForecast(res http.ResponseWriter, req *http.Request, cache *types.Cache[
 
 	cachedValue, found := cache.GetEntry(cityName, vars.TimeToLive)
 	if found {
+		forecast := deepCopyForecast(cachedValue)
+
 		// Format forecast object and then return it
-		for idx := range cachedValue.Forecast {
-			cachedValue.Forecast[idx].Min = fmtTemperature(cachedValue.Forecast[idx].Min, isImperial)
-			cachedValue.Forecast[idx].Max = fmtTemperature(cachedValue.Forecast[idx].Max, isImperial)
-			cachedValue.Forecast[idx].FeelsLike = fmtTemperature(cachedValue.Forecast[idx].FeelsLike, isImperial)
-			cachedValue.Forecast[idx].Wind.Speed = fmtWind(cachedValue.Forecast[idx].Wind.Speed, isImperial)
+		for idx := range forecast.Forecast {
+			val := &forecast.Forecast[idx]
+
+			val.Min = fmtTemperature(val.Min, isImperial)
+			val.Max = fmtTemperature(val.Max, isImperial)
+			val.FeelsLike = fmtTemperature(val.FeelsLike, isImperial)
+			val.Wind.Speed = fmtWind(val.Wind.Speed, isImperial)
 		}
 
-		jsonValue(res, cachedValue)
+		jsonValue(res, forecast)
 	} else {
 		// Get city coordinates
 		city, err := model.GetCoordinates(cityName, vars.Token)
@@ -227,18 +244,16 @@ func GetForecast(res http.ResponseWriter, req *http.Request, cache *types.Cache[
 		}
 
 		// Add result to cache
-		cache.AddEntry(forecast, cityName)
-
-		// *****************
-		// FIXME: formatting 'forecast' alters cached value
-		// *****************
+		cache.AddEntry(deepCopyForecast(forecast), cityName)
 
 		// Format forecast object and then return it
 		for idx := range forecast.Forecast {
-			forecast.Forecast[idx].Min = fmtTemperature(forecast.Forecast[idx].Min, isImperial)
-			forecast.Forecast[idx].Max = fmtTemperature(forecast.Forecast[idx].Max, isImperial)
-			forecast.Forecast[idx].FeelsLike = fmtTemperature(forecast.Forecast[idx].FeelsLike, isImperial)
-			forecast.Forecast[idx].Wind.Speed = fmtWind(forecast.Forecast[idx].Wind.Speed, isImperial)
+			val := &forecast.Forecast[idx]
+
+			val.Min = fmtTemperature(val.Min, isImperial)
+			val.Max = fmtTemperature(val.Max, isImperial)
+			val.FeelsLike = fmtTemperature(val.FeelsLike, isImperial)
+			val.Wind.Speed = fmtWind(val.Wind.Speed, isImperial)
 		}
 
 		jsonValue(res, forecast)
