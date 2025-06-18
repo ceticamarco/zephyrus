@@ -24,7 +24,7 @@ func (date *ZephyrDate) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (date *ZephyrDate) MarshalJSON() ([]byte, error) {
+func (date ZephyrDate) MarshalJSON() ([]byte, error) {
 	if date.Date.IsZero() {
 		return []byte("\"\""), nil
 	}

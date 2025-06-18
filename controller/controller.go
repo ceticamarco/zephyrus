@@ -259,3 +259,33 @@ func GetForecast(res http.ResponseWriter, req *http.Request, cache *types.Cache[
 		jsonValue(res, forecast)
 	}
 }
+
+func GetMoon(res http.ResponseWriter, req *http.Request, cache *types.CacheEntity[types.Moon], vars *types.Variables) {
+	if req.Method != http.MethodGet {
+		jsonError(res, "error", "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	cachedValue, found := cache.GetEntry(vars.TimeToLive)
+	if found {
+		// Format moon object and then return it
+		cachedValue.Percentage = fmt.Sprintf("%s%%", cachedValue.Percentage)
+
+		jsonValue(res, cachedValue)
+	} else {
+		// Get moon data
+		moon, err := model.GetMoon(vars.Token)
+		if err != nil {
+			jsonError(res, "error", err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		// Add result to cache
+		cache.AddEntry(moon)
+
+		// Format moon object and then return it
+		moon.Percentage = fmt.Sprintf("%s%%", moon.Percentage)
+
+		jsonValue(res, moon)
+	}
+}

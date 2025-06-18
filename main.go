@@ -47,6 +47,10 @@ func main() {
 		controller.GetForecast(res, req, &cache.ForecastCache, &vars)
 	})
 
+	http.HandleFunc("/moon", func(res http.ResponseWriter, req *http.Request) {
+		controller.GetMoon(res, req, &cache.MoonCache, &vars)
+	})
+
 	listenAddr := fmt.Sprintf(":%s", port)
 	log.Printf("Server listening on %s", listenAddr)
 	http.ListenAndServe(listenAddr, nil)

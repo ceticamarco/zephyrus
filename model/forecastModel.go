@@ -43,7 +43,7 @@ type forecastRes struct {
 func getForecastEntity(dailyForecast dailyRes) types.ForecastEntity {
 	// Format UNIX timestamp as 'YYYY-MM-DD'
 	utcTime := time.Unix(int64(dailyForecast.Timestamp), 0)
-	weatherDate := &types.ZephyrDate{Date: utcTime.UTC()}
+	weatherDate := types.ZephyrDate{Date: utcTime.UTC()}
 
 	// Set condition accordingly to weather description
 	var condition string
