@@ -62,14 +62,12 @@ func GetWind(city *types.City, apiKey string) (types.Wind, error) {
 
 	defer res.Body.Close()
 
-	// Structures representing the JSON response
-	type CurrentRes struct {
-		Speed   float64 `json:"wind_speed"`
-		Degrees float64 `json:"wind_deg"`
-	}
-
+	// Structure representing the JSON response
 	type WindRes struct {
-		Current CurrentRes `json:"current"`
+		Current struct {
+			Speed   float64 `json:"wind_speed"`
+			Degrees float64 `json:"wind_deg"`
+		} `json:"current"`
 	}
 
 	var windRes WindRes

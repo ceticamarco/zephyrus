@@ -11,29 +11,23 @@ import (
 	"github.com/ceticamarco/zephyr/types"
 )
 
-// Structure representing the JSON response
-type tempRes struct {
-	Min float64 `json:"min"`
-	Max float64 `json:"max"`
-}
-
-type fsRes struct {
-	Day float64 `json:"day"`
-}
-
-type weatherRes struct {
-	Title       string `json:"main"`
-	Description string `json:"description"`
-	Icon        string `json:"icon"`
-}
-
+// Structures representing the JSON response
 type dailyRes struct {
-	Temp      tempRes      `json:"temp"`
-	FeelsLike fsRes        `json:"feels_like"`
-	Weather   []weatherRes `json:"weather"`
-	WindSpeed float64      `json:"wind_speed"`
-	WindDeg   float64      `json:"wind_deg"`
-	Timestamp int64        `json:"dt"`
+	Temp struct {
+		Min float64 `json:"min"`
+		Max float64 `json:"max"`
+	} `json:"temp"`
+	FeelsLike struct {
+		Day float64 `json:"day"`
+	} `json:"feels_like"`
+	Weather []struct {
+		Title       string `json:"main"`
+		Description string `json:"description"`
+		Icon        string `json:"icon"`
+	} `json:"weather"`
+	WindSpeed float64 `json:"wind_speed"`
+	WindDeg   float64 `json:"wind_deg"`
+	Timestamp int64   `json:"dt"`
 }
 
 type forecastRes struct {
@@ -76,7 +70,6 @@ func getForecastEntity(dailyForecast dailyRes) types.ForecastEntity {
 			Speed:     strconv.FormatFloat(dailyForecast.WindSpeed, 'f', 2, 64),
 		},
 	}
-
 }
 
 func GetForecast(city *types.City, apiKey string) (types.Forecast, error) {

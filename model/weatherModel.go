@@ -63,20 +63,18 @@ func GetWeather(city *types.City, apiKey string) (types.Weather, error) {
 	}
 	defer res.Body.Close()
 
-	// Structures representing the JSON response
-	type InfoRes struct {
-		Title       string `json:"main"`
-		Description string `json:"description"`
-		Icon        string `json:"icon"`
-	}
-	type CurrentRes struct {
-		FeelsLike   float64   `json:"feels_like"`
-		Temperature float64   `json:"temp"`
-		Timestamp   int64     `json:"dt"`
-		Weather     []InfoRes `json:"weather"`
-	}
+	// Structure representing the JSON response
 	type WeatherRes struct {
-		Current CurrentRes `json:"current"`
+		Current struct {
+			FeelsLike   float64 `json:"feels_like"`
+			Temperature float64 `json:"temp"`
+			Timestamp   int64   `json:"dt"`
+			Weather     []struct {
+				Title       string `json:"main"`
+				Description string `json:"description"`
+				Icon        string `json:"icon"`
+			} `json:"weather"`
+		} `json:"current"`
 	}
 
 	var weather WeatherRes

@@ -31,17 +31,15 @@ func GetMetrics(city *types.City, apiKey string) (types.Metrics, error) {
 	}
 	defer res.Body.Close()
 
-	// Structures representing the JSON response
-	type CurrentRes struct {
-		Humidity   int     `json:"humidity"`
-		Pressure   int     `json:"pressure"`
-		DewPoint   float64 `json:"dew_point"`
-		UvIndex    float64 `json:"uvi"`
-		Visibility float64 `json:"visibility"`
-	}
-
+	// Structure representing the JSON response
 	type MetricsRes struct {
-		Current CurrentRes `json:"current"`
+		Current struct {
+			Humidity   int     `json:"humidity"`
+			Pressure   int     `json:"pressure"`
+			DewPoint   float64 `json:"dew_point"`
+			UvIndex    float64 `json:"uvi"`
+			Visibility float64 `json:"visibility"`
+		} `json:"current"`
 	}
 
 	var metricRes MetricsRes

@@ -1,6 +1,7 @@
 package types
 
 import (
+	"strings"
 	"time"
 )
 
@@ -39,8 +40,8 @@ func InitCache() *Caches {
 	}
 }
 
-func (cache *Cache[T]) GetEntry(key string, ttl int8) (T, bool) {
-	val, isPresent := cache.Data[key]
+func (cache *Cache[T]) GetEntry(cityName string, ttl int8) (T, bool) {
+	val, isPresent := cache.Data[strings.ToUpper(cityName)]
 
 	// If key is not present, return a zero value
 	if !isPresent {
@@ -60,11 +61,10 @@ func (cache *Cache[T]) GetEntry(key string, ttl int8) (T, bool) {
 func (cache *Cache[T]) AddEntry(entry T, cityName string) {
 	currentTime := time.Now()
 
-	cache.Data[cityName] = CacheEntity[T]{
+	cache.Data[strings.ToUpper(cityName)] = CacheEntity[T]{
 		element:   entry,
 		timestamp: currentTime,
 	}
-
 }
 
 func (moon *CacheEntity[Moon]) GetEntry(ttl int8) (Moon, bool) {
@@ -86,8 +86,6 @@ func (moon *CacheEntity[Moon]) GetEntry(ttl int8) (Moon, bool) {
 }
 
 func (cache *CacheEntity[Moon]) AddEntry(entry Moon) {
-	currentTime := time.Now()
-
 	cache.element = entry
-	cache.timestamp = currentTime
+	cache.timestamp = time.Now()
 }
