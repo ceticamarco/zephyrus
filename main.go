@@ -23,8 +23,9 @@ func main() {
 		log.Fatalf("Environment variables not set")
 	}
 
-	// Initialize cache and vars
+	// Initialize cache, statDB and vars
 	cache := types.InitCache()
+	statDB := types.InitDB()
 	vars := types.Variables{
 		Token:      token,
 		TimeToLive: int8(ttl),
@@ -32,7 +33,7 @@ func main() {
 
 	// API endpoints
 	http.HandleFunc("/weather/", func(res http.ResponseWriter, req *http.Request) {
-		controller.GetWeather(res, req, &cache.WeatherCache, &vars)
+		controller.GetWeather(res, req, &cache.WeatherCache, statDB, &vars)
 	})
 
 	http.HandleFunc("/metrics/", func(res http.ResponseWriter, req *http.Request) {

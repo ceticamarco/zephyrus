@@ -47,6 +47,12 @@ func fmtWind(windSpeed string, isImperial bool) string {
 	return fmt.Sprintf("%.1f km/h", (parsedSpeed * 3.6))
 }
 
+func fmtKey(key string) string {
+	// Format cache/database keys by replacing whitespaces with '+' token
+	// and making them uppercase
+	return strings.ToUpper(strings.ReplaceAll(key, " ", "+"))
+}
+
 func deepCopyForecast(original types.Forecast) types.Forecast {
 	// Copy the outer structure
 	fc_copy := original
@@ -60,7 +66,7 @@ func deepCopyForecast(original types.Forecast) types.Forecast {
 	return fc_copy
 }
 
-func GetWeather(res http.ResponseWriter, req *http.Request, cache *types.Cache[types.Weather], vars *types.Variables) {
+func GetWeather(res http.ResponseWriter, req *http.Request, cache *types.Cache[types.Weather], statDB *types.StatDB, vars *types.Variables) {
 	if req.Method != http.MethodGet {
 		jsonError(res, "error", "method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -73,7 +79,7 @@ func GetWeather(res http.ResponseWriter, req *http.Request, cache *types.Cache[t
 	// Check whether the 'i' parameter(imperial mode) is specified
 	isImperial := req.URL.Query().Has("i")
 
-	cachedValue, found := cache.GetEntry(cityName, vars.TimeToLive)
+	cachedValue, found := cache.GetEntry(fmtKey(cityName), vars.TimeToLive)
 	if found {
 		// Format weather object and then return it
 		cachedValue.Temperature = fmtTemperature(cachedValue.Temperature, isImperial)
@@ -96,7 +102,10 @@ func GetWeather(res http.ResponseWriter, req *http.Request, cache *types.Cache[t
 		}
 
 		// Add result to cache
-		cache.AddEntry(weather, cityName)
+		cache.AddEntry(weather, fmtKey(cityName))
+
+		// Insert new statistic entry into the statistics database
+		statDB.AddStatistic(fmtKey(cityName), weather)
 
 		// Format weather object and then return it
 		weather.Temperature = fmtTemperature(weather.Temperature, isImperial)
@@ -119,7 +128,7 @@ func GetMetrics(res http.ResponseWriter, req *http.Request, cache *types.Cache[t
 	// Check whether the 'i' parameter(imperial mode) is specified
 	isImperial := req.URL.Query().Has("i")
 
-	cachedValue, found := cache.GetEntry(cityName, vars.TimeToLive)
+	cachedValue, found := cache.GetEntry(fmtKey(cityName), vars.TimeToLive)
 	if found {
 		// Format metrics object and then return it
 		cachedValue.Humidity = fmt.Sprintf("%s%%", cachedValue.Humidity)
@@ -144,7 +153,7 @@ func GetMetrics(res http.ResponseWriter, req *http.Request, cache *types.Cache[t
 		}
 
 		// Add result to cache
-		cache.AddEntry(metrics, cityName)
+		cache.AddEntry(metrics, fmtKey(cityName))
 
 		// Format metrics object and then return it
 		metrics.Humidity = fmt.Sprintf("%s%%", metrics.Humidity)
@@ -169,7 +178,7 @@ func GetWind(res http.ResponseWriter, req *http.Request, cache *types.Cache[type
 	// Check whether the 'i' parameter(imperial mode) is specified
 	isImperial := req.URL.Query().Has("i")
 
-	cachedValue, found := cache.GetEntry(cityName, vars.TimeToLive)
+	cachedValue, found := cache.GetEntry(fmtKey(cityName), vars.TimeToLive)
 	if found {
 		// Format wind object and then return it
 		cachedValue.Speed = fmtWind(cachedValue.Speed, isImperial)
@@ -191,7 +200,7 @@ func GetWind(res http.ResponseWriter, req *http.Request, cache *types.Cache[type
 		}
 
 		// Add result to cache
-		cache.AddEntry(wind, cityName)
+		cache.AddEntry(wind, fmtKey(cityName))
 
 		// Format wind object and then return it
 		wind.Speed = fmtWind(wind.Speed, isImperial)
@@ -213,7 +222,7 @@ func GetForecast(res http.ResponseWriter, req *http.Request, cache *types.Cache[
 	// Check whether the 'i' parameter(imperial mode) is specified
 	isImperial := req.URL.Query().Has("i")
 
-	cachedValue, found := cache.GetEntry(cityName, vars.TimeToLive)
+	cachedValue, found := cache.GetEntry(fmtKey(cityName), vars.TimeToLive)
 	if found {
 		forecast := deepCopyForecast(cachedValue)
 
@@ -244,7 +253,7 @@ func GetForecast(res http.ResponseWriter, req *http.Request, cache *types.Cache[
 		}
 
 		// Add result to cache
-		cache.AddEntry(deepCopyForecast(forecast), cityName)
+		cache.AddEntry(deepCopyForecast(forecast), fmtKey(cityName))
 
 		// Format forecast object and then return it
 		for idx := range forecast.Forecast {
@@ -288,4 +297,24 @@ func GetMoon(res http.ResponseWriter, req *http.Request, cache *types.CacheEntit
 
 		jsonValue(res, moon)
 	}
+}
+
+func GetStatistics(res http.ResponseWriter, req *http.Request, statDB *types.StatDB) {
+	if req.Method != http.MethodGet {
+		jsonError(res, "error", "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract city name from '/stats/:city'
+	path := strings.TrimPrefix(req.URL.Path, "/stats/")
+	cityName := strings.Trim(path, "/") // Remove trailing slash if present
+
+	// Get city statistics
+	stats, err := model.GetStatistics(fmtKey(cityName), statDB)
+	if err != nil {
+		jsonError(res, "error", err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	jsonValue(res, stats)
 }
