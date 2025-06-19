@@ -92,14 +92,14 @@ func Mode(temperatures []float64) float64 {
 // A value is considered an anomaly if its modified z-score exceeds a fixed threshold(4.5)
 // and whether the absolute deviation surpasses another fixed parameter(8 degrees).
 // These constants have been fine-tuned to work well with the weather data of a wide range of climates
-// and to ignore daily temperature fluctuations while still detecting anomalies.
+// and to ignore daily temperature fluctuations while still being able to detect significant anomalies.
 //
 // The scaling constant Φ⁻¹(0.75) ≈ 0.6745 adjusts the MAD to be comparable to the standard deviation
 // under the assumption of normal distribution (i.e. 75% of values lie within ~0.6745 standard deviations
 // of the median).
 //
-// Daily temperatures collected over a short time window(1/2 month) *should* be normally distributed.
-// This algorithm only work under this assumption.
+// Daily temperatures collected over a short time window(1/2 months, but not less than a few days)
+// *should* be normally distributed. This algorithm only work under this assumption.
 func RobustZScore(temperatures []float64) []struct {
 	Idx   int
 	Value float64
@@ -155,7 +155,7 @@ func DetectAnomalies(weatherArr []types.Weather) []types.WeatherAnomaly {
 	for _, anomaly := range anomalies {
 		result = append(result, types.WeatherAnomaly{
 			Date: weatherArr[anomaly.Idx].Date,
-			Temp: anomaly.Value,
+			Temp: strconv.FormatFloat(anomaly.Value, 'f', -1, 64),
 		})
 	}
 

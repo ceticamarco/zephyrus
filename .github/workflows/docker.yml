@@ -1,0 +1,17 @@
+name: Docker
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: |
+          mv compose.yml docker-compose.yml
+          echo -e "version: \"2.2\"\n$(cat docker-compose.yml)" > docker-compose.yml
+          docker compose build

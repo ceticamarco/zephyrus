@@ -4,18 +4,18 @@ package types
 // skewed meteorological events
 type WeatherAnomaly struct {
 	Date ZephyrDate `json:"date"`
-	Temp float64    `json:"temperature"`
+	Temp string     `json:"temperature"`
 }
 
 // The StatResult data type, representing weather statistics
 // of past meteorological events
 type StatResult struct {
-	Min     float64           `json:"min"`
-	Max     float64           `json:"max"`
+	Min     string            `json:"min"`
+	Max     string            `json:"max"`
 	Count   int               `json:"count"`
-	Mean    float64           `json:"mean"`
-	StdDev  float64           `json:"stdDev"`
-	Median  float64           `json:"median"`
-	Mode    float64           `json:"mode"`
+	Mean    string            `json:"mean"`
+	StdDev  string            `json:"stdDev"`
+	Median  string            `json:"median"`
+	Mode    string            `json:"mode"`
 	Anomaly *[]WeatherAnomaly `json:"anomaly"`
 }

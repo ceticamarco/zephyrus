@@ -34,6 +34,16 @@ func fmtTemperature(temp string, isImperial bool) string {
 	return fmt.Sprintf("%d°C", int(math.Round(parsedTemp)))
 }
 
+func fmtStdDev(stdDev string, isImperial bool) string {
+	parsedStdDev, _ := strconv.ParseFloat(stdDev, 64)
+
+	if isImperial {
+		return fmt.Sprintf("%.4f°F", (parsedStdDev*(9/5) + 32))
+	}
+
+	return fmt.Sprintf("%.4f°C", parsedStdDev)
+}
+
 func fmtWind(windSpeed string, isImperial bool) string {
 	// Convert wind speed to mph or km/s from m/s
 	// 1 m/s = 2.23694 mph
@@ -309,11 +319,27 @@ func GetStatistics(res http.ResponseWriter, req *http.Request, statDB *types.Sta
 	path := strings.TrimPrefix(req.URL.Path, "/stats/")
 	cityName := strings.Trim(path, "/") // Remove trailing slash if present
 
+	// Check whether the 'i' parameter(imperial mode) is specified
+	isImperial := req.URL.Query().Has("i")
+
 	// Get city statistics
 	stats, err := model.GetStatistics(fmtKey(cityName), statDB)
 	if err != nil {
 		jsonError(res, "error", err.Error(), http.StatusBadRequest)
 		return
+	}
+
+	// Format statistics object and then return it
+	stats.Min = fmtTemperature(stats.Min, isImperial)
+	stats.Max = fmtTemperature(stats.Max, isImperial)
+	stats.Mean = fmtTemperature(stats.Mean, isImperial)
+	stats.StdDev = fmtStdDev(stats.StdDev, isImperial)
+	stats.Median = fmtTemperature(stats.Median, isImperial)
+	stats.Mode = fmtTemperature(stats.Mode, isImperial)
+	if stats.Anomaly != nil {
+		for idx, val := range *stats.Anomaly {
+			(*stats.Anomaly)[idx].Temp = fmtTemperature(val.Temp, isImperial)
+		}
 	}
 
 	jsonValue(res, stats)

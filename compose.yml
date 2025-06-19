@@ -1,0 +1,14 @@
+services:
+  zephyr:
+    image: zephyr
+    build: .
+    container_name: "zephyr"
+    environment:
+      ZEPHYR_PORT:  3000  # Listen port
+      ZEPHYR_TOKEN: ""    # OpenWeatherMap API Key
+      ZEPHYR_CACHE_TTL: 3 # Cache time-to-live in hour
+    restart: always
+    volumes:
+      - "/etc/localtime:/etc/localtime:ro"
+    ports:
+      - "3000:3000"

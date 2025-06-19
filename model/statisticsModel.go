@@ -46,13 +46,13 @@ func GetStatistics(cityName string, statDB *types.StatDB) (types.StatResult, err
 
 	// Compute statistics
 	return types.StatResult{
-		Min:     slices.Min(temps),
-		Max:     slices.Max(temps),
+		Min:     strconv.FormatFloat(slices.Min(temps), 'f', -1, 64),
+		Max:     strconv.FormatFloat(slices.Max(temps), 'f', -1, 64),
 		Count:   len(stats),
-		Mean:    statistics.Mean(temps),
-		StdDev:  statistics.StdDev(temps),
-		Median:  statistics.Median(temps),
-		Mode:    statistics.Mode(temps),
+		Mean:    strconv.FormatFloat(statistics.Mean(temps), 'f', -1, 64),
+		StdDev:  strconv.FormatFloat(statistics.StdDev(temps), 'f', -1, 64),
+		Median:  strconv.FormatFloat(statistics.Median(temps), 'f', -1, 64),
+		Mode:    strconv.FormatFloat(statistics.Mode(temps), 'f', -1, 64),
 		Anomaly: &anomalies,
 	}, nil
 }
