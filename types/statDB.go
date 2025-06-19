@@ -50,3 +50,15 @@ func (statDB *StatDB) IsKeyInvalid(key string) bool {
 
 	return true
 }
+
+func (statDB *StatDB) GetCityStatistics(cityName string) []Weather {
+	result := make([]Weather, 0)
+
+	for key, record := range statDB.db {
+		if strings.HasSuffix(key, cityName) {
+			result = append(result, record)
+		}
+	}
+
+	return result
+}

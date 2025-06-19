@@ -52,6 +52,10 @@ func main() {
 		controller.GetMoon(res, req, &cache.MoonCache, &vars)
 	})
 
+	http.HandleFunc("/stats/", func(res http.ResponseWriter, req *http.Request) {
+		controller.GetStatistics(res, req, statDB)
+	})
+
 	listenAddr := fmt.Sprintf(":%s", port)
 	log.Printf("Server listening on %s", listenAddr)
 	http.ListenAndServe(listenAddr, nil)
