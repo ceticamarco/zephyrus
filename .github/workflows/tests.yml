@@ -1,0 +1,19 @@
+name: Tests
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go stable
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+      - name: "Running unit tests"
+        run:  go test ./... -v

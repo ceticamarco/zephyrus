@@ -8,6 +8,9 @@ WORKDIR /app
 # Copy source files
 COPY . .
 
+# Run unit tests
+RUN go test ./... -v
+
 # Build the application
 RUN go build -ldflags="-s -w" -o zephyr
 

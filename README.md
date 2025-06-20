@@ -4,6 +4,7 @@
 <h6><i>real-time weather forecast service</i></h6>
 
 [![](https://github.com/ceticamarco/zephyr/actions/workflows/docker.yml/badge.svg)](https://github.com/ceticamarco/zephyr/actions/workflows/docker.yml)
+[![](https://github.com/ceticamarco/zephyr/actions/workflows/tests.yml/badge.svg)](https://github.com/ceticamarco/zephyr/actions/workflows/tests.yml)
 
 </div>
 
@@ -163,7 +164,7 @@ will yield
 }
 ```
 
-> [!INFO]
+> [!NOTE]
 > To convert OpenWeatherMap's moon phase value to the illumination percentage, 
 > I've used the following formula:
 > 
@@ -332,6 +333,13 @@ docker compose up -d
 This will build the container image and start the service in detached mode. By default,
 the service will be available at `http://127.0.0.1:3000`, but you can easily change this property
 but editing the `compose.yml` as stated above.
+
+## Unit tests
+You can run the unit tests by issuing the following command:
+
+```sh
+ go test ./... -v
+ ```
 
 ## License
 This software is released under the GPLv3 license. You can find a copy of the license with this repository or by visiting the [following page](https://choosealicense.com/licenses/gpl-3.0/).
